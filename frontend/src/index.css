@@ -1,0 +1,36 @@
+/* stylelint-disable */
+@import "tailwindcss";
+
+/* Tailwind v4: CSS-first theme configuration */
+/* @theme directive định nghĩa design tokens dùng trong toàn dự án */
+@theme {
+  --color-brand: #ea580c;
+  --color-brand-hover: #c2410c;
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
