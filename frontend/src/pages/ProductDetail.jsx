@@ -15,23 +15,32 @@ export default function ProductDetail({ onAddToCart }) {
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${id}`)
-      .then((r) => {
+    let active = true;
+    const loadProduct = async () => {
+      setLoading(true);
+      try {
+        const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${id}`);
         if (!r.ok) throw new Error('not found');
-        return r.json();
-      })
-      .then(async (p) => {
-        setProduct(p);
+        const p = await r.json();
+        
         // Lấy tên danh mục
         const catRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/categories`);
         const cats = await catRes.json();
-        setCategory(cats.find((c) => c.id === p.category_id));
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
+        
+        if (active) {
+            setProduct(p);
+            setCategory(cats.find((c) => c.id === p.category_id));
+            setLoading(false);
+        }
+      } catch {
+        if (active) {
+            setLoading(false);
+        }
+      }
+    };
+    
+    loadProduct();
+    return () => { active = false; };
   }, [id]);
 
   const handleAddToCart = () => {

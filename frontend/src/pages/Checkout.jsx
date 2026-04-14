@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, ArrowLeft, Loader, QrCode, Hourglass } from 'lucide-react';
 import { AuthContext } from "../context/AuthContext.jsx";
 
@@ -8,7 +8,7 @@ const fmt = (price) =>
 
 export default function Checkout({ cartItems, onCheckoutSuccess }) {
   const { user, isAuthenticated } = useContext(AuthContext);
-  const navigate = useNavigate();
+
 
   const [form, setForm] = useState({
     full_name: user?.full_name || '',

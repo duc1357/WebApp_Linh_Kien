@@ -10,21 +10,34 @@ export default function HomePage({ categories, onAddToCart, searchQuery, onClear
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    setErrorMsg('');
-    let url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products`;
-    const params = [];
-    if (categoryId) params.push(`category_id=${categoryId}`);
-    if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
-    if (params.length) url += '?' + params.join('&');
+    let active = true;
+    const loadProducts = async () => {
+      setLoading(true);
+      setErrorMsg('');
+      let url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products`;
+      const params = [];
+      if (categoryId) params.push(`category_id=${categoryId}`);
+      if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
+      if (params.length) url += '?' + params.join('&');
 
-    fetch(url)
-      .then(res => {
+      try {
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-        return res.json();
-      })
-      .then(data => { setProducts(data); setLoading(false); })
-      .catch(err => { setErrorMsg(err.message); setLoading(false); });
+        const data = await res.json();
+        if (active) {
+          setProducts(data);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          setErrorMsg(err.message);
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadProducts();
+    return () => { active = false; };
   }, [categoryId, searchQuery]);
 
   return (

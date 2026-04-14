@@ -220,18 +220,18 @@ function OrdersView() {
   const [status, setStatus] = useState('');
   const limit = 10;
 
-  useEffect(() => {
-    fetchOrders();
-  }, [page, debouncedSearch, status]);
-
-  const fetchOrders = () => {
+  function fetchOrders() {
     setLoading(true);
     api.get(`/admin/orders?page=${page}&limit=${limit}&search=${debouncedSearch}&status=${status}`).then(res => {
       setOrders(res.data.items);
       setTotalPages(res.data.pages);
       setLoading(false);
     }).catch(() => setLoading(false));
-  };
+  }
+
+  useEffect(() => {
+    fetchOrders();
+  }, [page, debouncedSearch, status]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -415,11 +415,7 @@ function ProductsView() {
     api.get('/v1/categories').then(res => setCategories(res.data)).catch(()=>{});
   }, []);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [page, debouncedSearch, categoryId]);
-
-  const fetchProducts = () => {
+  function fetchProducts() {
     setLoading(true);
     let url = `/admin/products?page=${page}&limit=${limit}&search=${debouncedSearch}`;
     if (categoryId) url += `&category_id=${categoryId}`;
@@ -432,7 +428,11 @@ function ProductsView() {
       console.error(err);
       setLoading(false);
     });
-  };
+  }
+
+  useEffect(() => {
+    fetchProducts();
+  }, [page, debouncedSearch, categoryId]);
 
   const handleDelete = async (id) => {
     if(!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) return;
@@ -744,18 +744,18 @@ function UsersView() {
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [page, debouncedSearch]);
-
-  const fetchUsers = () => {
+  function fetchUsers() {
     setLoading(true);
     api.get(`/admin/users?page=${page}&limit=${limit}&search=${debouncedSearch}`).then(res => {
       setUsers(res.data.items);
       setTotalPages(res.data.pages);
       setLoading(false);
     }).catch(() => setLoading(false));
-  };
+  }
+
+  useEffect(() => {
+    fetchUsers();
+  }, [page, debouncedSearch]);
 
   const handleToggleBlock = async (userId) => {
     try {
@@ -1047,18 +1047,18 @@ function ReviewsView() {
   const debouncedSearch = useDebounce(search, 500);
   const limit = 10;
 
-  useEffect(() => {
-    fetchReviews();
-  }, [page, debouncedSearch]);
-
-  const fetchReviews = () => {
+  function fetchReviews() {
     setLoading(true);
     api.get(`/admin/reviews?page=${page}&limit=${limit}&search=${debouncedSearch}`).then(res => {
       setReviews(res.data.items);
       setTotalPages(res.data.pages);
       setLoading(false);
     }).catch(() => setLoading(false));
-  };
+  }
+
+  useEffect(() => {
+    fetchReviews();
+  }, [page, debouncedSearch]);
 
   const handleDelete = async (reviewId) => {
     if(!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) return;
