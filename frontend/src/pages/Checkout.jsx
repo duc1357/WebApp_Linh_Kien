@@ -55,7 +55,7 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
     };
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/orders/checkout', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/orders/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -77,7 +77,7 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
     if (success && success.payment_method.startsWith('SEPAY') && !['PAID', 'DEPOSITED'].includes(paymentStatus)) {
         intervalId = setInterval(async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/v1/orders/${success.order_id}/status`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/orders/${success.order_id}/status`);
                 const data = await res.json();
                 if (data.payment_status === 'PAID' || data.payment_status === 'DEPOSITED') {
                     setPaymentStatus(data.payment_status);

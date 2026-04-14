@@ -22,7 +22,7 @@ export default function ProductReviews({ productId }) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/reviews`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${productId}/reviews`);
       if (res.ok) {
         const data = await res.json();
         setReviews(data);
@@ -44,7 +44,7 @@ export default function ProductReviews({ productId }) {
     setError(null);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/reviews`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${productId}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export default function ProductReviews({ productId }) {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/user/upload-image`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/user/upload-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

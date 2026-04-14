@@ -29,7 +29,7 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
       setLoading(true);
       const cat = categories.find(c => c.name === slotId);
       if (cat) {
-        const res = await fetch(`http://localhost:8000/api/v1/products?category_id=${cat.id}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products?category_id=${cat.id}`);
         const data = await res.json();
         setProductsCache(prev => ({ ...prev, [slotId]: data }));
       }
@@ -98,7 +98,7 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
     setValidating(true);
     setAiReport(null);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/pc-builder/validate', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/pc-builder/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: allItems }),

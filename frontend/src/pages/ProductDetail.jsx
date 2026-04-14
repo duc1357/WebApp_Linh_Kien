@@ -16,7 +16,7 @@ export default function ProductDetail({ onAddToCart }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`http://localhost:8000/api/v1/products/${id}`)
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error('not found');
         return r.json();
@@ -24,7 +24,7 @@ export default function ProductDetail({ onAddToCart }) {
       .then(async (p) => {
         setProduct(p);
         // Lấy tên danh mục
-        const catRes = await fetch('http://localhost:8000/api/v1/categories');
+        const catRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/categories`);
         const cats = await catRes.json();
         setCategory(cats.find((c) => c.id === p.category_id));
         setLoading(false);

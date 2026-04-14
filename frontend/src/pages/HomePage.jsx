@@ -12,7 +12,7 @@ export default function HomePage({ categories, onAddToCart, searchQuery, onClear
   useEffect(() => {
     setLoading(true);
     setErrorMsg('');
-    let url = 'http://localhost:8000/api/v1/products';
+    let url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products`;
     const params = [];
     if (categoryId) params.push(`category_id=${categoryId}`);
     if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);

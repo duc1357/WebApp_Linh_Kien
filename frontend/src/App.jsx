@@ -55,7 +55,7 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/v1/categories')
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/categories`)
       .then(r => r.json())
       .then(setCategories)
       .catch(() => {});

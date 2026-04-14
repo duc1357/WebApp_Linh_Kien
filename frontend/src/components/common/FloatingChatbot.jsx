@@ -42,7 +42,7 @@ export default function FloatingChatbot({ onAddToCart }) {
 
   useEffect(() => {
     if (isOpen && chatMode === 'laptop' && laptops.length === 0) {
-      fetch('http://localhost:8000/api/v1/laptops')
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/laptops`)
         .then(res => res.json())
         .then(data => setLaptops(data))
         .catch(() => {});
@@ -94,7 +94,7 @@ export default function FloatingChatbot({ onAddToCart }) {
     try {
       if (chatMode === 'laptop') {
         // Chẩn đoán laptop
-        const res = await fetch('http://localhost:8000/api/v1/ai/diagnose', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/ai/diagnose`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ laptop_id: selectedLaptop.id, issue_description: userText }),
@@ -109,7 +109,7 @@ export default function FloatingChatbot({ onAddToCart }) {
 
       } else if (chatMode === 'pc_build') {
         // Tư vấn build PC
-        const res = await fetch('http://localhost:8000/api/v1/ai/recommend-build', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/ai/recommend-build`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requirement: userText }),
