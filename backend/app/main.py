@@ -3,7 +3,9 @@ load_dotenv()  # Nạp biến môi trường từ .env TRƯỚC khi import ai_se
 import os
 
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import traceback
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from app.core.database import engine, get_db
@@ -20,6 +22,15 @@ import app.services.email_service as email_service
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Website Linh Kiện E-commerce")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # Trả về chuỗi traceback chi tiết lên frontend để debug Render
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"SERVER ERROR: {str(exc)}"}
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
