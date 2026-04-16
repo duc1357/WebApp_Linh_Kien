@@ -24,6 +24,7 @@ app = FastAPI(title="Website Linh Kiện E-commerce")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,   # Bắt buộc để HttpOnly Cookie hoạt động
     allow_methods=["*"],
     allow_headers=["*"],
