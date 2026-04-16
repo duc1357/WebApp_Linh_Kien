@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Star, Send, ShieldCheck, AlertCircle, MessageSquare, ImagePlus, XCircle, Activity } from 'lucide-react';
 import { AuthContext } from "../../context/AuthContext.jsx";
+import api, { getImageUrl } from "../../api/axios";
 
 export default function ProductReviews({ productId }) {
   const [reviews, setReviews] = useState([]);
@@ -22,11 +23,8 @@ export default function ProductReviews({ productId }) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${productId}/reviews`);
-      if (res.ok) {
-        const data = await res.json();
-        setReviews(data);
-      }
+      const res = await api.get(`/products/${productId}/reviews`);
+      setReviews(res.data);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
     } finally {
@@ -44,24 +42,12 @@ export default function ProductReviews({ productId }) {
     setError(null);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${productId}/reviews`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          product_id: parseInt(productId),
-          rating,
-          comment,
-          image: imageUrl
-        })
+      await api.post(`/products/${productId}/reviews`, {
+        product_id: parseInt(productId),
+        rating,
+        comment,
+        image: imageUrl
       });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Không thể gửi đánh giá');
-      }
 
       setComment('');
       setRating(5);
@@ -83,16 +69,10 @@ export default function ProductReviews({ productId }) {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/user/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
+      const res = await api.post('/user/upload-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (!res.ok) throw new Error('Ảnh quá lớn hoặc lỗi server.');
-      const data = await res.json();
-      setImageUrl(data.url);
+      setImageUrl(res.data.url);
     } catch (err) {
       alert("Lỗi tải ảnh: " + err.message);
     } finally {
@@ -222,7 +202,7 @@ export default function ProductReviews({ productId }) {
               <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap ml-14">{review.comment}</p>
               {review.image && (
                 <div className="ml-14 mt-3">
-                  <img src={review.image} alt="User Review" className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(review.image, '_blank')} />
+                  <img src={getImageUrl(review.image)} alt="User Review" className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(getImageUrl(review.image), '_blank')} />
                 </div>
               )}
             </div>

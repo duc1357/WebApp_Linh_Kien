@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, ArrowLeft, Loader, QrCode, Hourglass } from 'lucide-react';
+import { 
+  ShoppingBag, MapPin, User, Mail, Phone, CheckCircle, ArrowLeft, 
+  Loader, QrCode, Hourglass, Copy, ShieldCheck, CreditCard, Check 
+} from 'lucide-react';
 import { AuthContext } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
+import api, { getImageUrl } from "../api/axios";
 
 const fmt = (price) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-export default function Checkout({ cartItems, onCheckoutSuccess }) {
+export default function Checkout({ onCheckoutSuccess }) {
   const { user, isAuthenticated } = useContext(AuthContext);
+  const { cartItems, clearCart } = useCart();
 
 
   const [form, setForm] = useState({
@@ -23,6 +29,13 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState('UNPAID');
+  const [copied, setCopied] = useState('');
+
+  const handleCopy = (text, type) => {
+    navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(''), 2000);
+  };
 
   const totalValue = cartItems.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
   const depositAmount = Math.ceil(totalValue * 0.3 / 1000) * 1000;
@@ -55,18 +68,13 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
     };
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/orders/checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Đặt hàng thất bại!');
-      setSuccess({...data, payment_method: form.payment_method});
+      const res = await api.post('/orders/checkout', payload);
+      setSuccess({...res.data, payment_method: form.payment_method});
       // Clear cart
+      clearCart();
       onCheckoutSuccess?.();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message);
     }
     setLoading(false);
   };
@@ -77,8 +85,8 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
     if (success && success.payment_method.startsWith('SEPAY') && !['PAID', 'DEPOSITED'].includes(paymentStatus)) {
         intervalId = setInterval(async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/orders/${success.order_id}/status`);
-                const data = await res.json();
+                const res = await api.get(`/orders/${success.order_id}/status`);
+                const data = res.data;
                 if (data.payment_status === 'PAID' || data.payment_status === 'DEPOSITED') {
                     setPaymentStatus(data.payment_status);
                     clearInterval(intervalId);
@@ -104,86 +112,93 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
 
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 max-w-md w-full text-center animate-in zoom-in duration-500">
-          
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-8 max-w-sm w-full animate-in zoom-in duration-500 relative overflow-hidden">
+          {/* Background Decorative */}
+          <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-br from-orange-500 to-amber-500 -z-10" />
+
           {isVietQR ? (
-              <div className="mb-6 space-y-4">
-                  <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                    <QrCode className="w-10 h-10 text-orange-500" />
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-800">Quét Mã VietQR</h2>
-                  <p className="text-slate-500 text-sm">Sử dụng App Ngân Hàng / Momo để quét mã. Tự động xác nhận sau 3 giây.</p>
-                  
-                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-orange-200">
-                      <img src={vietQrUrl} alt="VietQR" className="w-full h-auto rounded-xl shadow-sm bg-white" />
+              <div className="mb-2 space-y-4 pt-2">
+                  {/* Header Logo & Scan Animation */}
+                  <div className="relative w-16 h-16 bg-white rounded-2xl shadow-lg border border-orange-100 flex items-center justify-center mx-auto mb-4 p-1 overflow-hidden">
+                    <div className="absolute inset-0 border-2 border-orange-400 rounded-2xl animate-pulse" />
+                    {/* Quét tia line effect */}
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500/80 blur-[1px] z-10 animate-[scan_2s_ease-in-out_infinite]" />
+                    <QrCode className="w-8 h-8 text-orange-500" />
                   </div>
                   
-                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 px-4 py-2 rounded-xl">
-                      <Hourglass className="w-4 h-4 animate-spin" /> Đang chờ thanh toán...
+                  <div className="text-center space-y-1">
+                    <h2 className="text-xl font-black text-white mix-blend-difference">Thanh Toán VietQR</h2>
+                    <p className="text-slate-500 text-xs font-medium">Quét mã để tự động xác nhận sau 3 giây</p>
+                  </div>
+                  
+                  {/* QR Image Frame */}
+                  <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-2 rounded-3xl border border-orange-200/50 shadow-inner max-w-[200px] mx-auto">
+                      <div className="bg-white p-2 rounded-2xl shadow-sm relative group overflow-hidden flex justify-center">
+                          <img src={vietQrUrl} alt="VietQR" className="w-full h-auto object-contain rounded-xl" />
+                      </div>
+                  </div>
+
+                  {/* Amount Badge */}
+                  <div className="bg-orange-500 text-white p-4 rounded-2xl shadow-lg shadow-orange-500/30 border border-orange-400 text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 -mr-4 -mt-4 opacity-10">
+                       <CreditCard className="w-24 h-24" />
+                    </div>
+                    <p className="text-orange-100 text-xs uppercase tracking-wider font-bold mb-1 relative z-10">Số Tiền Cần Chuyển {success.payment_method === 'SEPAY_30' ? '(Cọc 30%)' : ''}</p>
+                    <p className="text-2xl font-black relative z-10">{fmt(amountToPay)}</p>
+                    {success.payment_method === 'SEPAY_30' && (
+                        <p className="text-orange-100 text-xs mt-1 border-t border-orange-400/50 pt-1 relative z-10">
+                            Còn lại <strong className="text-white">{fmt(success.total_amount - amountToPay)}</strong> thu COD
+                        </p>
+                    )}
+                  </div>
+                  
+                  {/* Chuyển khoản thủ công */}
+                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 text-left space-y-3">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5"/> Nhập Thủ Công 
+                    </p>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600 font-medium">{BANK_BIN}</span>
+                      <strong className="text-slate-800">Vua Linh Kiện </strong>
+                    </div>
+                    <div className="flex justify-between items-center text-sm bg-white p-2 border border-slate-200 rounded-lg">
+                      <span className="font-mono font-bold text-slate-800 text-base">{BANK_ACCOUNT}</span>
+                      <button type="button" onClick={() => handleCopy(BANK_ACCOUNT, 'acc')} className="text-orange-500 hover:bg-orange-50 p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold">
+                        {copied === 'acc' ? <><Check className="w-4 h-4 text-green-500" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy</>}
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center text-sm bg-blue-50 p-2 border border-blue-200 rounded-lg">
+                      <span className="font-mono font-black text-blue-700 text-lg tracking-widest pl-2">VLK{success.order_id}</span>
+                      <button type="button" onClick={() => handleCopy(`VLK${success.order_id}`, 'content')} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold">
+                        {copied === 'content' ? <><Check className="w-4 h-4 text-green-600" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy</>}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-red-500 font-bold mt-1 text-center">⚠️ GHI ĐÚNG NỘI DUNG ĐỂ HỆ THỐNG TỰ NHẬN DIỆN.</p>
+                  </div>
+                  
+                  {/* Status Indicator */}
+                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-200 shadow-sm px-4 py-3 rounded-xl overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-100 to-transparent animate-[shimmer_2s_infinite] -z-10" />
+                      <Hourglass className="w-4 h-4 text-orange-500 animate-spin" /> Đang chờ hệ thống xác nhận...
                   </div>
               </div>
           ) : (
               // Màn hình Đã Thanh Toán / COD an toàn
-              <div className="mb-6">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="mb-6 pt-10">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                    <div className="absolute inset-0 border-4 border-green-400 rounded-full animate-ping opacity-20" />
                     <CheckCircle className="w-14 h-14 text-green-500" />
                 </div>
                 <h2 className="text-3xl font-black text-slate-800 mb-2">
-                    {paymentStatus === 'PAID' ? "Đã Thu Tiền!" : "Đặt Hàng Thành Công!"}
+                    {paymentStatus === 'PAID' ? "Giao Dịch Thành Công!" : "Đặt Hàng Thành Công!"}
                 </h2>
                 <p className="text-slate-500 text-sm mb-4">
-                    Cảm ơn bạn đã mua sắm tại Vua Linh Kiện!
+                    Cảm ơn bạn đã mua sắm tại Vua Linh Kiện! Vui lòng tải lại hoặc về trang chủ.
                 </p>
               </div>
           )}
 
-          <div className="bg-slate-50 rounded-xl p-4 mb-6 text-left space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Mã đơn hàng</span>
-              <span className="font-black text-slate-800">#{success.order_id}</span>
-            </div>
-            {isVietQR && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Nội dung CK <span className="text-[10px] text-red-500 font-normal">(Bắt buộc)</span></span>
-                  <span className="font-mono font-black text-blue-600 tracking-widest bg-blue-50 px-2 py-0.5 rounded">VLK{success.order_id}</span>
-                </div>
-            )}
-            <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
-              <span className="text-slate-500">Tổng giá trị đơn hàng</span>
-              <span className={success.payment_method === 'SEPAY_30' ? "font-bold text-slate-400 line-through" : "font-black text-slate-800"}>
-                {fmt(success.total_amount)}
-              </span>
-            </div>
-            
-            {success.payment_method === 'SEPAY_30' && (
-              <>
-                <div className="flex justify-between items-center text-sm bg-orange-50/50 p-2 rounded-lg border border-orange-100">
-                  <span className="font-semibold text-orange-700">Cần thanh toán Đặt cọc (30%)</span>
-                  <span className="font-black text-xl text-orange-600">{fmt(amountToPay)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Còn lại (Thu COD khi nhận hàng)</span>
-                  <span className="font-bold text-slate-800">{fmt(success.total_amount - amountToPay)}</span>
-                </div>
-              </>
-            )}
 
-            {success.payment_method === 'SEPAY_100' && (
-              <div className="flex justify-between items-center text-sm bg-orange-50/50 p-2 rounded-lg border border-orange-100">
-                <span className="font-semibold text-orange-700">Cần thanh toán Toàn bộ (100%)</span>
-                <span className="font-black text-xl text-orange-600">{fmt(amountToPay)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
-              <span className="text-slate-500">Trạng thái</span>
-              {['PAID', 'DEPOSITED'].includes(paymentStatus) ? (
-                 <span className="font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-xs">ĐÃ XÁC NHẬN (CÓ CỌC)</span>
-              ) : (
-                 <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs animate-pulse">CHỜ XÁC NHẬN</span>
-              )}
-            </div>
-          </div>
           
           {(!isVietQR) && (
               <div className="flex gap-3">
@@ -399,7 +414,7 @@ export default function Checkout({ cartItems, onCheckoutSuccess }) {
               {cartItems.map((item, idx) => (
                 <div key={idx} className="flex gap-3 p-4 items-center">
                   <img
-                    src={item.product.image}
+                    src={getImageUrl(item.product.image)}
                     alt={item.product.name}
                     className="w-14 h-14 object-contain bg-slate-50 rounded-lg border border-slate-100 p-1 shrink-0"
                   />

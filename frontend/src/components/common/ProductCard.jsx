@@ -1,17 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Eye } from 'lucide-react';
+import { useCart } from "../../context/CartContext.jsx";
+import { getImageUrl } from "../../api/axios";
 
 const fmt = (price) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-export default function ProductCard({ item, onAddToCart }) {
+export default function ProductCard({ item }) {
+  const { addToCart } = useCart();
+
   return (
     <div className="group bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-200 transition-all duration-300 flex flex-col overflow-hidden relative">
       {/* Ảnh — click vào xem detail */}
       <Link to={`/products/${item.id}`} className="block w-full h-48 bg-white p-4 relative flex items-center justify-center overflow-hidden">
         <img
-          src={item.image || 'https://via.placeholder.com/200?text=Hardware'}
+          src={getImageUrl(item.image) || 'https://via.placeholder.com/200?text=Hardware'}
           alt={item.name}
           className="max-h-full object-contain group-hover:scale-110 transition-transform duration-500 ease-out"
         />
@@ -40,7 +44,7 @@ export default function ProductCard({ item, onAddToCart }) {
         </div>
 
         <button
-          onClick={() => onAddToCart(item)}
+          onClick={() => addToCart(item)}
           disabled={item.stock === 0}
           className="mt-4 w-full bg-white border-2 border-[var(--color-brand)] text-[var(--color-brand)] font-bold py-2.5 rounded-lg hover:bg-[var(--color-brand)] hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white cursor-pointer shadow-sm"
         >

@@ -1,36 +1,41 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import SidebarFilter from "../components/common/SidebarFilter.jsx";
 import ProductCard from "../components/common/ProductCard.jsx";
-import FloatingChatbot from "../components/common/FloatingChatbot.jsx";
+import { useShop } from "../context/ShopContext.jsx";
+import api from "../api/axios";
 
-export default function HomePage({ categories, onAddToCart, searchQuery, onClearSearch }) {
+export default function HomePage() {
+  const { categories } = useShop();
   const [products, setProducts] = useState([]);
   const [categoryId, setCategoryId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const searchQuery = searchParams.get('search') || '';
 
   useEffect(() => {
     let active = true;
     const loadProducts = async () => {
       setLoading(true);
       setErrorMsg('');
-      let url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products`;
+      let url = '/products';
       const params = [];
       if (categoryId) params.push(`category_id=${categoryId}`);
       if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
       if (params.length) url += '?' + params.join('&');
 
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-        const data = await res.json();
+        const res = await api.get(url);
         if (active) {
-          setProducts(data);
+          setProducts(res.data);
           setLoading(false);
         }
       } catch (err) {
         if (active) {
-          setErrorMsg(err.message);
+          setErrorMsg(err.response?.data?.detail || err.message);
           setLoading(false);
         }
       }
@@ -39,6 +44,10 @@ export default function HomePage({ categories, onAddToCart, searchQuery, onClear
     loadProducts();
     return () => { active = false; };
   }, [categoryId, searchQuery]);
+
+  const handleClearSearch = () => {
+    setSearchParams(new URLSearchParams());
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen">
@@ -65,7 +74,7 @@ export default function HomePage({ categories, onAddToCart, searchQuery, onClear
             </h2>
             <div className="flex items-center gap-2">
               {searchQuery && (
-                <button onClick={onClearSearch} className="text-xs font-bold text-[var(--color-brand)] bg-orange-50 px-3 py-1 rounded-full hover:bg-orange-100 transition-colors cursor-pointer">
+                <button onClick={handleClearSearch} className="text-xs font-bold text-[var(--color-brand)] bg-orange-50 px-3 py-1 rounded-full hover:bg-orange-100 transition-colors cursor-pointer">
                   × Xóa tìm kiếm
                 </button>
               )}
@@ -90,15 +99,12 @@ export default function HomePage({ categories, onAddToCart, searchQuery, onClear
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {products.map(p => (
-                <ProductCard key={p.id} item={p} onAddToCart={onAddToCart} />
+                <ProductCard key={p.id} item={p} />
               ))}
             </div>
           )}
         </div>
       </main>
-
-      {/* Floating Chatbot Vẫn được giữ ở trong Shop */}
-      <FloatingChatbot onAddToCart={onAddToCart} />
     </div>
   );
 }

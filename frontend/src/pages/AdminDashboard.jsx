@@ -412,7 +412,7 @@ function ProductsView() {
 
   useEffect(() => {
     // Tải Category để dùng trong Form Options
-    api.get('/v1/categories').then(res => setCategories(res.data)).catch(()=>{});
+    api.get('/categories').then(res => setCategories(res.data)).catch(()=>{});
   }, []);
 
   function fetchProducts() {

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, Laptop, Search, ChevronRight, PackageCheck, Cpu, ShoppingCart, Zap } from 'lucide-react';
+import { useCart } from "../../context/CartContext.jsx";
+import api, { getImageUrl } from "../../api/axios";
 
 const USE_CASE_LABELS = {
   gaming: '🎮 Gaming',
@@ -9,7 +11,8 @@ const USE_CASE_LABELS = {
   general: '🖥️ Đa năng',
 };
 
-export default function FloatingChatbot({ onAddToCart }) {
+export default function FloatingChatbot() {
+  const { addToCart, addMultipleToCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
 
   // Mode: null | 'laptop' | 'pc_build'
@@ -42,9 +45,8 @@ export default function FloatingChatbot({ onAddToCart }) {
 
   useEffect(() => {
     if (isOpen && chatMode === 'laptop' && laptops.length === 0) {
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/laptops`)
-        .then(res => res.json())
-        .then(data => setLaptops(data))
+      api.get('/laptops')
+        .then(res => setLaptops(res.data))
         .catch(() => {});
     }
   }, [isOpen, chatMode, laptops.length]);
@@ -94,13 +96,8 @@ export default function FloatingChatbot({ onAddToCart }) {
     try {
       if (chatMode === 'laptop') {
         // Chẩn đoán laptop
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/ai/diagnose`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ laptop_id: selectedLaptop.id, issue_description: userText }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Lỗi chẩn đoán');
+        const res = await api.post('/ai/diagnose', { laptop_id: selectedLaptop.id, issue_description: userText });
+        const data = res.data;
         setMessages(prev => [...prev, {
           role: 'bot',
           text: data.diagnosis || 'Đã nhận được phản hồi từ AI.',
@@ -109,13 +106,8 @@ export default function FloatingChatbot({ onAddToCart }) {
 
       } else if (chatMode === 'pc_build') {
         // Tư vấn build PC
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/ai/recommend-build`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requirement: userText }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Lỗi gọi AI');
+        const res = await api.post('/ai/recommend-build', { requirement: userText });
+        const data = res.data;
         setMessages(prev => [...prev, {
           role: 'bot',
           text: data.message || 'Đây là cấu hình gợi ý từ Vua Linh Kiện!',
@@ -130,7 +122,7 @@ export default function FloatingChatbot({ onAddToCart }) {
   };
 
   const handleAddAllToCart = (products) => {
-    products.forEach(item => onAddToCart(item.product));
+    addMultipleToCart(products.map(item => item.product));
   };
 
   const handleReset = () => {
@@ -236,9 +228,9 @@ export default function FloatingChatbot({ onAddToCart }) {
                       </p>
                       {msg.categories.flatMap(cat =>
                         cat.products.map((item, i) => (
-                          <div key={i} onClick={() => onAddToCart(item.product)} className="flex gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer group transition-all">
+                          <div key={i} onClick={() => addToCart(item.product)} className="flex gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer group transition-all">
                             <div className="w-10 h-10 shrink-0 bg-white rounded border border-slate-100 p-1 flex items-center justify-center">
-                              <img src={item.product.image} className="max-w-full max-h-full object-contain" alt="" />
+                              <img src={getImageUrl(item.product.image)} className="max-w-full max-h-full object-contain" alt="" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="text-[11px] font-bold text-slate-700 truncate group-hover:text-[var(--color-brand)]">{item.product.name}</div>
@@ -266,9 +258,9 @@ export default function FloatingChatbot({ onAddToCart }) {
 
                       <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
                         {msg.buildResult.products.map((item, i) => (
-                          <div key={i} onClick={() => onAddToCart(item.product)} className="flex gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer group transition-all">
+                          <div key={i} onClick={() => addToCart(item.product)} className="flex gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer group transition-all">
                             <div className="w-9 h-9 shrink-0 bg-white rounded border border-slate-100 p-0.5 flex items-center justify-center">
-                              <img src={item.product.image} className="max-w-full max-h-full object-contain" alt="" />
+                              <img src={getImageUrl(item.product.image)} className="max-w-full max-h-full object-contain" alt="" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="text-[9px] font-bold text-slate-400 uppercase">{item.category}</div>

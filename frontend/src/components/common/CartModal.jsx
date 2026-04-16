@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingBag, Trash2, Trash } from 'lucide-react';
 import { getImageUrl } from "../../api/axios";
+import { useCart } from "../../context/CartContext.jsx";
 
-export default function CartModal({ open, onClose, cartItems, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
+export default function CartModal({ open, onClose, onCheckout }) {
+  const { cartItems, updateQuantity, removeItem, clearCart } = useCart();
   const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function CartModal({ open, onClose, cartItems, onUpdateQuantity, 
 
   const handleClearCart = () => {
     if (confirmClear) {
-      onClearCart();
+      clearCart();
       setConfirmClear(false);
     } else {
       setConfirmClear(true);
@@ -111,11 +113,11 @@ export default function CartModal({ open, onClose, cartItems, onUpdateQuantity, 
                     </p>
                     
                     <div className="flex items-center bg-slate-100 rounded-full p-0.5">
-                      <button onClick={() => onUpdateQuantity(item.product.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:text-orange-500 hover:shadow transition-all">
+                      <button onClick={() => updateQuantity(item.product.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:text-orange-500 hover:shadow transition-all">
                         <Minus className="w-3.5 h-3.5" strokeWidth={3} />
                       </button>
                       <span className="text-xs font-black min-w-[32px] text-center text-slate-800">{item.quantity}</span>
-                      <button onClick={() => onUpdateQuantity(item.product.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:text-orange-500 hover:shadow transition-all">
+                      <button onClick={() => updateQuantity(item.product.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:text-orange-500 hover:shadow transition-all">
                         <Plus className="w-3.5 h-3.5" strokeWidth={3} />
                       </button>
                     </div>
@@ -123,7 +125,7 @@ export default function CartModal({ open, onClose, cartItems, onUpdateQuantity, 
                 </div>
 
                 <button
-                  onClick={() => onRemoveItem(item.product.id)}
+                  onClick={() => removeItem(item.product.id)}
                   className="absolute top-3 right-3 p-1.5 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   title="Xóa sản phẩm này"
                 >

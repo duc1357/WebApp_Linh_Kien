@@ -2,13 +2,20 @@ import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, MonitorSmartphone, MonitorDot, UserCircle, LogOut, User, Search, X, Menu } from 'lucide-react';
 import { AuthContext } from "../../context/AuthContext.jsx";
+import { useCart } from "../../context/CartContext.jsx";
 
-export default function Header({ cartCount, onOpenCart, searchQuery, onSearch }) {
+export default function Header({ searchQuery, onSearch }) {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
+  const { totalCartCount, setIsCartOpen } = useCart();
   const [localSearch, setLocalSearch] = useState(searchQuery || '');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Cập nhật ô input khi searchQuery thay đổi từ ngoài
+  useEffect(() => {
+    setLocalSearch(searchQuery || '');
+  }, [searchQuery]);
 
   // Đóng menu khi đổi route
   useEffect(() => {
@@ -31,6 +38,8 @@ export default function Header({ cartCount, onOpenCart, searchQuery, onSearch })
     setLocalSearch('');
     onSearch?.('');
   };
+
+  const onOpenCart = () => setIsCartOpen(true);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -145,9 +154,9 @@ export default function Header({ cartCount, onOpenCart, searchQuery, onSearch })
           >
             <ShoppingCart className="w-6 h-6" />
             <span className="font-semibold hidden lg:inline text-sm">Giỏ hàng</span>
-            {cartCount > 0 && (
+            {totalCartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
-                {cartCount}
+                {totalCartCount}
               </span>
             )}
           </button>

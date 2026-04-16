@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShoppingCart, ArrowLeft, Package, Tag, Layers, CheckCircle, AlertTriangle, Plus, Minus } from 'lucide-react';
 import ProductReviews from "../components/common/ProductReviews.jsx";
+import { useCart } from "../context/CartContext.jsx";
+import api, { getImageUrl } from "../api/axios";
+
 const fmt = (price) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-export default function ProductDetail({ onAddToCart }) {
+export default function ProductDetail() {
+  const { addToCart } = useCart();
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
@@ -19,13 +23,12 @@ export default function ProductDetail({ onAddToCart }) {
     const loadProduct = async () => {
       setLoading(true);
       try {
-        const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products/${id}`);
-        if (!r.ok) throw new Error('not found');
-        const p = await r.json();
+        const r = await api.get(`/products/${id}`);
+        const p = r.data;
         
         // Lấy tên danh mục
-        const catRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/categories`);
-        const cats = await catRes.json();
+        const catRes = await api.get('/categories');
+        const cats = catRes.data;
         
         if (active) {
             setProduct(p);
@@ -44,7 +47,7 @@ export default function ProductDetail({ onAddToCart }) {
   }, [id]);
 
   const handleAddToCart = () => {
-    for (let i = 0; i < qty; i++) onAddToCart(product);
+    for (let i = 0; i < qty; i++) addToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -109,7 +112,7 @@ export default function ProductDetail({ onAddToCart }) {
         <div className="relative">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex items-center justify-center min-h-[360px] group overflow-hidden">
             <img
-              src={product.image || 'https://via.placeholder.com/400?text=Hardware'}
+              src={getImageUrl(product.image) || 'https://via.placeholder.com/400?text=Hardware'}
               alt={product.name}
               className="max-h-80 w-full object-contain group-hover:scale-110 transition-transform duration-500"
             />

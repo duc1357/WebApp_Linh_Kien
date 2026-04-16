@@ -29,9 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
-app.include_router(user_router, prefix="/api/user", tags=["User"])
-app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(user_router, prefix="/api/v1/user", tags=["User"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 
 os.makedirs("static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -103,9 +103,9 @@ async def payment_webhook(request: Request, data: schemas.SePayWebhookData, db: 
     
     api_key_from_header = auth_header.split(" ")[1]
     
-    # Optional: Retrieve known API Key from .env and verify.
-    # We will assume successful verification for now based on the requested token
-    if api_key_from_header != "IYD3USSRJBIPRKAZFEGLGD3I8ZIP6HH9DH71BXRAVANKOUQ8MBSK0XLYWVQYAC47":
+    # Verify API Key from environment variables
+    valid_api_key = os.getenv("SEPAY_API_KEY")
+    if not valid_api_key or api_key_from_header != valid_api_key:
         raise HTTPException(status_code=403, detail="Forbidden API Key")
 
     # Transaction is money IN

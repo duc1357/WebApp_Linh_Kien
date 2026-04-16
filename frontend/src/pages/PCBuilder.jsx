@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Cpu, Server, CircuitBoard, MonitorPlay, Zap, HardDrive, Fan, Plus, Link, CheckCircle, AlertTriangle, Cpu as CpuIcon, ShieldCheck, ShoppingCart, X, Trash2 } from 'lucide-react';
+import { useShop } from "../context/ShopContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
+import api, { getImageUrl } from "../api/axios";
 
 const REQUIRED_SLOTS = [
   { id: 'CPU',          name: 'Vi Xử Lý (CPU)',      icon: Cpu,          multi: false },
@@ -14,7 +17,9 @@ const REQUIRED_SLOTS = [
 
 const fmt = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-export default function PCBuilder({ categories, onAddAllToCart }) {
+export default function PCBuilder() {
+  const { categories } = useShop();
+  const { addMultipleToCart } = useCart();
   // selectedParts: { slotId: product[] } — luôn lưu dạng mảng
   const [selectedParts, setSelectedParts] = useState({});
   const [selectingSlot, setSelectingSlot] = useState(null);
@@ -29,9 +34,8 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
       setLoading(true);
       const cat = categories.find(c => c.name === slotId);
       if (cat) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/products?category_id=${cat.id}`);
-        const data = await res.json();
-        setProductsCache(prev => ({ ...prev, [slotId]: data }));
+        const res = await api.get(`/products?category_id=${cat.id}`);
+        setProductsCache(prev => ({ ...prev, [slotId]: res.data }));
       }
       setLoading(false);
     }
@@ -98,12 +102,8 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
     setValidating(true);
     setAiReport(null);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/pc-builder/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: allItems }),
-      });
-      const data = await res.json();
+      const res = await api.post('/pc-builder/validate', { items: allItems });
+      const data = res.data;
       setAiReport({ ...data, is_compatible: data.is_compatible || false });
     } catch {
       setAiReport({ is_compatible: false, evaluation: 'Lỗi kết nối AI. Vui lòng thử lại.' });
@@ -116,7 +116,7 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
     const allProducts = Object.values(selectedParts)
       .flat()
       .flatMap(({ product, qty }) => Array(qty).fill(product));
-    onAddAllToCart(allProducts);
+    addMultipleToCart(allProducts);
   };
 
   // Tổng tiền = giá × qty của mỗi entry
@@ -192,7 +192,7 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
                   <div className="border-t border-slate-100 divide-y divide-slate-50">
                     {items.map(({ product, qty }) => (
                       <div key={product.id} className="flex items-center gap-3 px-4 py-2.5 bg-slate-50/50 group">
-                        <img src={product.image} alt={product.name} className="w-10 h-10 object-contain rounded bg-white border border-slate-100 p-1 shrink-0" />
+                        <img src={getImageUrl(product.image)} alt={product.name} className="w-10 h-10 object-contain rounded bg-white border border-slate-100 p-1 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
                           <p className="text-[10px] text-slate-400 truncate">{product.specs}</p>
@@ -325,7 +325,7 @@ export default function PCBuilder({ categories, onAddAllToCart }) {
                           </div>
                         )}
                         <div className="h-24 w-full flex justify-center mb-3">
-                          <img src={item.image} alt={item.name} className="max-h-full object-contain group-hover:scale-110 transition-transform" />
+                          <img src={getImageUrl(item.image)} alt={item.name} className="max-h-full object-contain group-hover:scale-110 transition-transform" />
                         </div>
                         <h4 className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug group-hover:text-[var(--color-brand)]">
                           {item.name}
