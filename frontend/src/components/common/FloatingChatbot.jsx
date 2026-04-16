@@ -115,7 +115,9 @@ export default function FloatingChatbot() {
         }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'bot', text: (err instanceof Error ? err.message : null) || 'Xin lỗi, hệ thống AI đang bảo trì. Vui lòng thử lại sau!' }]);
+      const serverMsg = err.response?.data?.detail;
+      const finalMsg = serverMsg || (err instanceof Error ? err.message : 'Xin lỗi, hệ thống AI đang bảo trì. Vui lòng thử lại sau!');
+      setMessages(prev => [...prev, { role: 'bot', text: finalMsg }]);
     }
 
     setLoading(false);
