@@ -20,9 +20,13 @@ def _call_gemini(prompt: str) -> str:
     for model in _MODELS:
         try:
             response = client.models.generate_content(model=model, contents=prompt)
+            import re
             raw = response.text.strip()
-            # Loại bỏ markdown code block nếu có
-            if raw.startswith("```json"):
+            # Trích xuất nội dung giữa { và } để tránh các đoạn text chào hỏi thừa của AI
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if match:
+                raw = match.group(0)
+            elif raw.startswith("```json"):
                 raw = raw[7:]
                 if raw.endswith("```"):
                     raw = raw[:-3]
@@ -63,9 +67,9 @@ def diagnose_laptop_issue(laptop_name: str, issue_description: str) -> dict:
     try:
         raw = _call_gemini(prompt)
         return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
+    except Exception as e:
         return {
-            "diagnosis": "Không thể chẩn đoán tự động. Vui lòng mô tả chi tiết hơn!",
+            "diagnosis": f"Lỗi phân tích tự động: {str(e)[:50]}. Vui lòng thử lại sau!",
             "recommended_category_names": []
         }
 
@@ -93,10 +97,10 @@ def evaluate_pc_build(items_list: list) -> dict:
     try:
         raw = _call_gemini(prompt)
         return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
+    except Exception as e:
         return {
             "is_compatible": False,
-            "evaluation": "Lỗi phân tích AI. Không thể đánh giá ngay lúc này."
+            "evaluation": f"Lỗi phân tích AI: {str(e)[:50]}..."
         }
 
 
@@ -130,9 +134,9 @@ def recommend_pc_build(user_requirement: str) -> dict:
     try:
         raw = _call_gemini(prompt)
         return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
+    except Exception as e:
         return {
-            "message": "Không thể phân tích yêu cầu. Vui lòng thử lại với mô tả rõ hơn!",
+            "message": f"Không thể phân tích yêu cầu do lỗi AI: {str(e)[:50]}.",
             "use_case": "general",
             "components": []
         }
