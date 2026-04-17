@@ -48,6 +48,12 @@ def login(
             detail="Email hoặc mật khẩu không đúng. Vui lòng thử lại!",
             headers={"WWW-Authenticate": "Bearer"},
         )
+        
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên!",
+        )
 
     access_token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     refresh_token = auth.create_refresh_token(data={"sub": user.email})
