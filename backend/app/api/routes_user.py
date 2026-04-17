@@ -22,7 +22,7 @@ def upload_image_user(file: UploadFile = File(...), current_user: models.User = 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    return {"url": f"http://localhost:8000/static/uploads/{new_filename}"}
+    return {"url": f"/static/uploads/{new_filename}"}
 
 @router.get("/profile", response_model=schemas.UserResponse)
 def get_profile(current_user: models.User = Depends(auth.get_current_user)):

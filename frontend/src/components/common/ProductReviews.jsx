@@ -189,7 +189,7 @@ export default function ProductReviews({ productId }) {
                       </span>
                     </p>
                     <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
-                      {new Date(review.created_at).toLocaleString('vi-VN')}
+                      {review.created_at}
                     </p>
                   </div>
                 </div>

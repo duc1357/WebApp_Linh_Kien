@@ -72,6 +72,14 @@ export default api;
 
 export const getImageUrl = (path) => {
   if (!path) return '';
+  
+  // Sửa lỗi dữ liệu cũ bị lưu cứng http://localhost:8000 vào database
+  if (path.startsWith('http://localhost:8000')) {
+    path = path.replace('http://localhost:8000', '');
+  }
+
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${path.startsWith('/') ? '' : '/'}${path}`;
+  
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 };

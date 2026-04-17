@@ -74,7 +74,7 @@ def upload_image(file: UploadFile = File(...), current_admin: models.User = admi
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    return {"url": f"http://localhost:8000/static/uploads/{new_filename}"}
+    return {"url": f"/static/uploads/{new_filename}"}
 
 @router.get("/users")
 def get_all_users(
