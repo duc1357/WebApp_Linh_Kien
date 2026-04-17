@@ -147,7 +147,7 @@ export default function ProductReviews({ productId }) {
           
           {imageUrl && (
             <div className="mt-4 relative inline-block">
-              <img src={imageUrl} alt="Preview" className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm" />
+              <img src={getImageUrl(imageUrl)} alt="Preview" className="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm" />
               <button 
                 type="button" 
                 onClick={() => setImageUrl('')}
