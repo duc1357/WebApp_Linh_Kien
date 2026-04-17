@@ -184,34 +184,62 @@ export default function Checkout({ onCheckoutSuccess }) {
               </div>
           ) : (
               // Màn hình Đã Thanh Toán / COD an toàn
-              <div className="mb-6 pt-10">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                    <div className="absolute inset-0 border-4 border-green-400 rounded-full animate-ping opacity-20" />
-                    <CheckCircle className="w-14 h-14 text-green-500" />
+              <div className="mb-6 pt-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="w-20 h-20 bg-gradient-to-tr from-green-500 to-emerald-400 rounded-full flex items-center justify-center mx-auto mb-5 shadow-xl shadow-green-500/40 relative">
+                    <div className="absolute inset-0 border-2 border-green-400 rounded-full animate-ping opacity-40" />
+                    <CheckCircle className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-3xl font-black text-slate-800 mb-2">
-                    {paymentStatus === 'PAID' ? "Giao Dịch Thành Công!" : "Đặt Hàng Thành Công!"}
+                <h2 className="text-2xl font-black text-slate-800 mb-2">
+                    {paymentStatus === 'PAID' ? "Thanh Toán Thành Công!" : "Đặt Hàng Thành Công!"}
                 </h2>
-                <p className="text-slate-500 text-sm mb-4">
-                    Cảm ơn bạn đã mua sắm tại Vua Linh Kiện! Vui lòng tải lại hoặc về trang chủ.
+                <p className="text-slate-500 text-sm mb-6">
+                    Cảm ơn bạn đã tin tưởng và mua sắm tại Vua Linh Kiện.
                 </p>
+
+                {/* Receipt Card */}
+                <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200 text-left relative overflow-hidden shadow-inner">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center pb-3 border-b border-dashed border-slate-300">
+                            <span className="text-slate-500 text-sm font-medium">Mã đơn hàng</span>
+                            <span className="font-black text-slate-800 font-mono text-base bg-white px-2 py-1 rounded shadow-sm border border-slate-100">
+                                VLK{success.order_id}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-dashed border-slate-300">
+                            <span className="text-slate-500 text-sm font-medium">Phương thức</span>
+                            <span className="font-bold text-slate-700 text-sm">
+                                {success.payment_method === 'SEPAY_30' ? 'Cọc 30% (VietQR)' : 
+                                 success.payment_method === 'SEPAY_100' ? 'Chuyển khoản 100%' : 'Thanh toán COD'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                            <span className="text-slate-500 text-sm font-medium">Tổng thanh toán</span>
+                            <span className="font-black text-2xl text-[var(--color-brand)]">{fmt(success.total_amount)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="mt-6 bg-blue-50 text-blue-700 text-xs p-3 rounded-xl border border-blue-100 flex items-start gap-2 text-left">
+                    <div className="shrink-0 mt-0.5">ℹ️</div>
+                    <p>Thông tin chi tiết đơn hàng đã được gửi vào email <strong>{success.user_email || "của bạn"}</strong>. Chúng tôi sẽ sớm liên hệ để giao hàng.</p>
+                </div>
               </div>
           )}
 
 
           
           {(!isVietQR) && (
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-4 animate-in fade-in duration-1000 delay-300">
                 <Link
                   to="/"
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-center"
+                  className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] text-center"
                 >
                   Tiếp tục mua
                 </Link>
                 {isAuthenticated && (
                   <Link
                     to="/profile?tab=orders"
-                    className="flex-1 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-bold rounded-xl transition-colors text-center"
+                    className="flex-1 py-3.5 bg-gradient-to-r from-[var(--color-brand)] to-amber-500 hover:to-orange-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] text-center"
                   >
                     Xem đơn hàng
                   </Link>
