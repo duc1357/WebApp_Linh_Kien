@@ -54,7 +54,7 @@ export default function ProductReviews({ productId }) {
       setImageUrl('');
       fetchReviews();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message);
     } finally {
       setSubmitting(false);
     }

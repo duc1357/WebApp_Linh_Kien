@@ -81,7 +81,17 @@ def create_review(
     if not crud.verify_user_purchased_item(db, current_user.id, product_id):
         raise HTTPException(status_code=403, detail="Chỉ khách hàng đã mua sản phẩm này mới được đánh giá!")
         
-    return crud.create_review(db, review, current_user.id)
+    new_r = crud.create_review(db, review, current_user.id)
+    return {
+        "id": new_r.id,
+        "product_id": new_r.product_id,
+        "user_id": new_r.user_id,
+        "user_name": current_user.full_name or "Khách",
+        "rating": new_r.rating,
+        "comment": new_r.comment,
+        "image": new_r.image,
+        "created_at": new_r.created_at.strftime("%d/%m/%Y %H:%M") if new_r.created_at else ""
+    }
 
 @app.post("/api/v1/orders/checkout", response_model=schemas.OrderResponse)
 def checkout(order_data: schemas.OrderCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
