@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { 
   LayoutDashboard, ShoppingCart, Package, Users, 
   LogOut, TrendingUp, DollarSign, PackageSearch, Activity,
-  CheckCircle, XCircle, Search, Edit, Trash2, Eye, EyeOff, Plus, Lock, UploadCloud, MessageSquare
+  CheckCircle, XCircle, Search, Edit, Trash2, Eye, EyeOff, Plus, Lock, UploadCloud, MessageSquare, Star
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api, { getImageUrl } from "../api/axios";
