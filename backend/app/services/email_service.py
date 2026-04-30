@@ -30,12 +30,17 @@ def send_email(to_email: str, subject: str, html_content: str):
 
         msg.attach(MIMEText(html_content, 'html'))
 
-        # Kết nối tới Server SMTP với STARTTLS
+        # Kết nối tới Server SMTP với STARTTLS (Cổng 587) hoặc SSL (Cổng 465)
         context = ssl.create_default_context()
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls(context=context)
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                server.starttls(context=context)
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
             
         print(f"✅ Đã gửi email thành công tới {to_email}")
     except Exception as e:
