@@ -1,4 +1,4 @@
-# Web_Linh_Kien - Thực hiện bởi Nhóm minhduc (2026)
+# Web_Linh_Kien - Thực hiện bởi minhduc (2026)
 
 Hệ thống Website bán giảng linh kiện điện tử chuyên nghiệp, đạt chuẩn thiết kế kiến trúc Modular (Standard 2025).
 
