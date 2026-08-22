@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, Server, CircuitBoard, MonitorPlay, Zap, HardDrive, Fan, Plus, Link, CheckCircle, AlertTriangle, Cpu as CpuIcon, ShieldCheck, ShoppingCart, X, Trash2 } from 'lucide-react';
+import { Cpu, Server, CircuitBoard, MonitorPlay, Zap, HardDrive, Fan, Plus, Link, CheckCircle, AlertTriangle, Cpu as CpuIcon, ShieldCheck, ShoppingCart, X, Trash2, ChevronDown, ChevronUp, CheckCircle2, Target, Sparkles, ShieldAlert } from 'lucide-react';
 import { useShop } from "../context/ShopContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import api, { getImageUrl } from "../api/axios";
@@ -27,6 +27,7 @@ export default function PCBuilder() {
   const [loading, setLoading] = useState(false);
   const [aiReport, setAiReport] = useState(null);
   const [validating, setValidating] = useState(false);
+  const [showFullEvaluation, setShowFullEvaluation] = useState(false);
 
   const handleOpenSlot = async (slotId) => {
     setSelectingSlot(slotId);
@@ -131,42 +132,45 @@ export default function PCBuilder() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-500">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-3">
-          <CpuIcon className="w-8 h-8 text-[var(--color-brand)]" />
-          XÂY DỰNG CẤU HÌNH PC ĐỈNH CAO
+      <div className="text-center mb-10">
+        <span className="bg-orange-500/10 border border-orange-500/20 text-[var(--color-brand)] text-[9px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-sm inline-block mb-3">
+          Rig Builder Simulator
+        </span>
+        <h1 className="text-2xl md:text-3xl font-heading font-black text-slate-100 tracking-tight flex items-center justify-center gap-3">
+          <CpuIcon className="w-7 h-7 text-[var(--color-brand)] text-glow-orange" />
+          XÂY DỰNG CẤU HÌNH PC CHUYÊN NGHIỆP
         </h1>
-        <p className="text-slate-500 font-medium mt-2">
-          Chọn linh kiện theo ý muốn. <span className="text-[var(--color-brand)] font-bold">RAM & Ổ Cứng</span> có thể thêm nhiều thanh. AI Gemini sẽ kiểm tra tương thích.
+        <p className="text-slate-400 font-medium text-xs md:text-sm mt-2 max-w-xl mx-auto leading-relaxed">
+          Tự do kết hợp các linh kiện công nghệ. Gemini AI sẽ tự động phân tích và đưa ra đánh giá tương thích socket và điện năng.
         </p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* CỘT TRÁI: SLOT LINH KIỆN */}
-        <div className="w-full lg:w-2/3 space-y-3">
+        <div className="w-full lg:w-2/3 space-y-4">
           {REQUIRED_SLOTS.map(slot => {
             const items = selectedParts[slot.id] || [];
             const hasItems = items.length > 0;
 
             return (
-              <div key={slot.id} className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div key={slot.id} className="bg-glass border border-glass rounded-2xl shadow-lg hover:shadow-black/20 transition-all overflow-hidden glow-card-hover">
                 {/* Slot header */}
                 <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-11 h-11 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                      <slot.icon className="w-5 h-5 text-[var(--color-brand)] opacity-80" />
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
+                      <slot.icon className="w-5 h-5 text-[var(--color-brand)] text-glow-orange" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{slot.name}</span>
+                        <span className="text-[10px] text-slate-300 font-black uppercase tracking-wider">{slot.name}</span>
                         {slot.multi && (
-                          <span className="text-[9px] bg-blue-100 text-blue-600 font-bold px-1.5 py-0.5 rounded-full">
+                          <span className="text-[8px] bg-blue-500/10 border border-blue-500/30 text-blue-400 font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
                             +Nhiều
                           </span>
                         )}
                       </div>
                       {!hasItems && (
-                        <div className="text-slate-300 italic text-sm mt-0.5">Chưa chọn linh kiện...</div>
+                        <div className="text-slate-500 italic text-xs mt-1">Chưa chọn linh kiện...</div>
                       )}
                     </div>
                   </div>
@@ -174,12 +178,12 @@ export default function PCBuilder() {
                   {/* Nút chọn / thêm */}
                   <button
                     onClick={() => handleOpenSlot(slot.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm transition-all hover:-translate-y-0.5 cursor-pointer shadow-sm ${
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-xs transition-all hover:-translate-y-0.5 cursor-pointer shadow-md ${
                       hasItems && slot.multi
-                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                        ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20'
                         : hasItems
-                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        : 'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] shadow-orange-500/20'
+                        ? 'bg-white/5 border border-glass text-slate-300 hover:bg-white/10'
+                        : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/20 hover:shadow-orange-500/30 border border-transparent'
                     }`}
                   >
                     <Plus className="w-4 h-4" />
@@ -189,36 +193,36 @@ export default function PCBuilder() {
 
                 {/* Danh sách items đã chọn trong slot */}
                 {hasItems && (
-                  <div className="border-t border-slate-100 divide-y divide-slate-50">
+                  <div className="border-t border-glass divide-y divide-glass bg-slate-950/20">
                     {items.map(({ product, qty }) => (
-                      <div key={product.id} className="flex items-center gap-3 px-4 py-2.5 bg-slate-50/50 group">
-                        <img src={getImageUrl(product.image)} alt={product.name} className="w-10 h-10 object-contain rounded bg-white border border-slate-100 p-1 shrink-0" />
+                      <div key={product.id} className="flex items-center gap-3 px-4 py-3 group">
+                        <img src={getImageUrl(product.image)} alt={product.name} className="w-10 h-10 object-contain rounded-lg bg-white border border-glass p-1 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{product.specs}</p>
+                          <p className="text-xs font-bold text-slate-200 truncate leading-snug">{product.name}</p>
+                          <p className="text-[10px] text-slate-500 truncate mt-0.5 leading-normal">{product.specs}</p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-3 shrink-0">
                           {/* Bộ điều chỉnh số lượng cho slot multi */}
                           {slot.multi && (
-                            <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden">
+                            <div className="flex items-center border border-glass rounded-lg bg-slate-900 overflow-hidden">
                               <button
                                 onClick={() => handleChangeQty(slot.id, product.id, -1)}
-                                className="px-2 py-1 text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer font-bold text-base leading-none"
+                                className="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer font-bold text-sm"
                               >-</button>
-                              <span className="px-2 text-sm font-black text-slate-800 min-w-[1.5rem] text-center">{qty}</span>
+                              <span className="px-2 text-xs font-black text-slate-200 min-w-[1.2rem] text-center">{qty}</span>
                               <button
                                 onClick={() => handleChangeQty(slot.id, product.id, 1)}
-                                className="px-2 py-1 text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer font-bold text-base leading-none"
+                                className="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer font-bold text-sm"
                               >+</button>
                             </div>
                           )}
-                          <span className="text-sm font-black text-[var(--color-brand)] min-w-[80px] text-right">
+                          <span className="text-xs font-black text-[var(--color-brand)] min-w-[70px] text-right text-glow-orange">
                             {fmt(product.price * qty)}
                           </span>
                           <button
                             onClick={() => handleRemovePartItem(slot.id, product.id)}
-                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                            title="Xóa linh kiện này"
+                            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-500/20"
+                            title="Xóa linh kiện"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -234,44 +238,144 @@ export default function PCBuilder() {
 
         {/* CỘT PHẢI: TÓM TẮT & ACTION */}
         <div className="w-full lg:w-1/3">
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200 sticky top-24 overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-slate-100 bg-slate-50 relative overflow-hidden">
-              <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl" />
-              <p className="text-slate-500 font-bold uppercase tracking-wider text-xs mb-1">Dự toán Tạm tính</p>
-              <p className="text-3xl font-black text-[var(--color-brand)]">{fmt(currentTotal)}</p>
-              <p className="text-xs text-slate-400 mt-1">{totalPartsCount} linh kiện đã chọn</p>
+          <div className="bg-glass border border-glass rounded-3xl shadow-2xl sticky top-24 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-glass bg-slate-900/40 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl" />
+              <p className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1">Dự toán Tạm tính</p>
+              <p className="text-2xl font-heading font-black text-[var(--color-brand)] text-glow-orange">{fmt(currentTotal)}</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-1">{totalPartsCount} linh kiện đã chọn</p>
             </div>
 
             <div className="p-6 flex-1 flex flex-col">
               <button
                 onClick={handleValidate}
                 disabled={validating || totalPartsCount === 0}
-                className="w-full py-3 mb-4 flex items-center justify-center gap-2 bg-[#1e293b] text-white hover:bg-black rounded-xl font-bold transition-all disabled:opacity-50 cursor-pointer group shadow-lg shadow-slate-900/20"
+                className="w-full py-3.5 mb-4 flex items-center justify-center gap-2 bg-white/5 border border-glass text-slate-200 hover:bg-white/10 rounded-xl font-bold transition-all disabled:opacity-50 cursor-pointer group shadow-lg shadow-black/10"
               >
                 {validating ? (
-                  <><Zap className="w-5 h-5 animate-pulse text-amber-400" /> AI ĐANG PHÂN TÍCH...</>
+                  <><Zap className="w-4 h-4 animate-pulse text-amber-400" /> AI ĐANG PHÂN TÍCH...</>
                 ) : (
-                  <><ShieldCheck className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" /> KIỂM TRA TƯƠNG THÍCH (AI)</>
+                  <><ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" /> KIỂM TRA TƯƠNG THÍCH (AI)</>
                 )}
               </button>
 
               {aiReport && (
-                <div className={`p-4 rounded-xl border-l-4 shadow-sm mb-4 animate-in zoom-in duration-300 text-sm leading-relaxed ${aiReport.is_compatible ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800'}`}>
-                  <div className="flex items-center gap-2 font-black mb-2 uppercase text-xs tracking-wider">
-                    {aiReport.is_compatible ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                    {aiReport.is_compatible ? 'Hoạt động Tốt' : 'Cảnh báo Xung đột'}
+                <div className="mb-4 space-y-3 animate-in zoom-in-95 duration-300">
+                  {/* 1. Header Card with Verdict & Summary */}
+                  <div className={`p-4 rounded-2xl border backdrop-blur-xl relative overflow-hidden ${
+                    aiReport.is_compatible 
+                      ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900/90 to-emerald-950/20 border-emerald-500/30 shadow-lg shadow-emerald-500/5' 
+                      : 'bg-gradient-to-br from-rose-950/40 via-slate-900/90 to-rose-950/20 border-rose-500/30 shadow-lg shadow-rose-500/5'
+                  }`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                        aiReport.is_compatible 
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                          : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                      }`}>
+                        {aiReport.is_compatible ? <CheckCircle2 className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <h4 className={`text-xs font-heading font-black tracking-wide uppercase ${
+                          aiReport.is_compatible ? 'text-emerald-400 text-glow-emerald' : 'text-rose-400 text-glow-rose'
+                        }`}>
+                          {aiReport.is_compatible ? 'CẤU HÌNH TƯƠNG THÍCH' : 'CẢNH BÁO TƯƠNG THÍCH'}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                          Kiểm định bởi AI Vua Linh Kiện
+                        </p>
+                      </div>
+                    </div>
+
+                    {aiReport.summary && (
+                      <p className="text-xs text-slate-200 mt-2.5 font-medium leading-relaxed bg-slate-950/50 p-2.5 rounded-xl border border-white/5">
+                        {aiReport.summary}
+                      </p>
+                    )}
+
+                    {aiReport.suitability && (
+                      <div className="mt-2.5 flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300 font-medium">
+                        <Target className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                        <span className="truncate" title={aiReport.suitability}>
+                          <strong className="text-orange-200">Phù hợp:</strong> {aiReport.suitability}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="italic opacity-90">{aiReport.evaluation}</div>
+
+                  {/* 2. Structured Component-by-Component Checks */}
+                  {aiReport.details && aiReport.details.length > 0 && (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {aiReport.details.map((detail, idx) => {
+                        const isPass = detail.status === 'pass';
+                        const isWarn = detail.status === 'warning';
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`p-2.5 rounded-xl border transition-all text-[11px] ${
+                              isPass 
+                                ? 'bg-slate-900/70 border-emerald-500/20 hover:border-emerald-500/40' 
+                                : isWarn 
+                                  ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50' 
+                                  : 'bg-rose-950/20 border-rose-500/30 hover:border-rose-500/50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${isPass ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : isWarn ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-rose-400 shadow-[0_0_8px_#f43f5e]'}`} />
+                                {detail.title}
+                              </span>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border tracking-wider ${
+                                isPass 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                  : isWarn 
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              }`}>
+                                {isPass ? 'Chuẩn' : isWarn ? 'Lưu ý' : 'Lỗi'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-normal pl-3.5">
+                              {detail.desc}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 3. Collapsible Detailed Expert Evaluation */}
+                  {aiReport.evaluation && (
+                    <div className="rounded-xl border border-glass bg-slate-900/50 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowFullEvaluation(!showFullEvaluation)}
+                        className="w-full px-3 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-200 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                          Nhận xét chi tiết từ Chuyên Gia
+                        </span>
+                        {showFullEvaluation ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      {showFullEvaluation && (
+                        <div className="p-3 border-t border-glass text-[11px] text-slate-300 leading-relaxed font-normal bg-slate-950/70 max-h-48 overflow-y-auto whitespace-pre-line">
+                          {aiReport.evaluation}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="mt-auto pt-4 border-t border-slate-100">
+              <div className="mt-auto pt-6 border-t border-glass">
                 <button
                   onClick={handleBuy}
                   disabled={totalPartsCount === 0}
-                  className="w-full py-4 text-white hover:scale-[1.02] bg-[var(--color-brand)] disabled:bg-slate-300 rounded-xl font-black text-lg transition-transform cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30"
+                  className="w-full py-4 text-white hover:scale-[1.01] bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 disabled:border-glass rounded-xl font-black text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:translate-y-0"
                 >
-                  <ShoppingCart className="w-5 h-5" /> THÊM TẤT CẢ VÀO GIỎ
+                  <ShoppingCart className="w-4.5 h-4.5" /> THÊM TẤT CẢ VÀO GIỎ HÀNG
                 </button>
               </div>
             </div>
@@ -281,29 +385,29 @@ export default function PCBuilder() {
 
       {/* POPUP: CHỌN SẢN PHẨM */}
       {selectingSlot && (
-        <div className="fixed inset-0 z-[100] flex justify-center items-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white max-w-4xl w-full rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+        <div className="fixed inset-0 z-[100] flex justify-center items-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-950 border border-glass max-w-4xl w-full rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="p-5 border-b border-glass flex justify-between items-center bg-slate-900/60">
               <div>
-                <h2 className="font-black text-lg text-slate-800">CHỌN {selectingSlot}</h2>
+                <h2 className="font-heading font-black text-base text-slate-100 uppercase tracking-wide">CHỌN {selectingSlot}</h2>
                 {selectingSlotDef?.multi && (
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                    ✅ Có thể chọn nhiều — sản phẩm đã chọn sẽ được thêm vào danh sách
+                  <p className="text-[10px] text-blue-400 font-bold mt-1">
+                    ✓ Chế độ chọn nhiều — Sản phẩm chọn sẽ tự động cộng dồn
                   </p>
                 )}
               </div>
-              <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-slate-200 rounded-full cursor-pointer">
-                <X className="w-5 h-5" />
+              <button onClick={() => setSelectingSlot(null)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-glass cursor-pointer">
+                <X className="w-4.5 h-4.5 text-slate-400" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-100/50">
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-950/40">
               {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[1, 2, 3].map(n => <div key={n} className="h-48 bg-slate-200 rounded-xl animate-pulse" />)}
+                  {[1, 2, 3].map(n => <div key={n} className="h-48 bg-glass border border-glass rounded-2xl animate-pulse" />)}
                 </div>
               ) : productsCache[selectingSlot]?.length === 0 ? (
-                <p className="text-center text-slate-500 font-medium py-10">Chưa có linh kiện trong danh mục này.</p>
+                <p className="text-center text-slate-500 font-medium py-10 text-xs">Chưa có linh kiện trong danh mục này.</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {productsCache[selectingSlot]?.map(item => {
@@ -313,28 +417,28 @@ export default function PCBuilder() {
                       <div
                         key={item.id}
                         onClick={() => handleSelectProduct(selectingSlot, item)}
-                        className={`bg-white p-4 rounded-xl border-2 shadow-sm transition-all flex flex-col group cursor-pointer ${
+                        className={`bg-slate-900/30 p-4 rounded-2xl border transition-all flex flex-col group cursor-pointer ${
                           selectedQty > 0
-                            ? 'border-orange-400 bg-orange-50'
-                            : 'border-slate-200 hover:border-orange-300'
+                            ? 'border-orange-500 bg-orange-500/10 shadow-lg shadow-orange-500/5'
+                            : 'border-glass hover:border-orange-500/30 hover:bg-white/5'
                         }`}
                       >
                         {selectedQty > 0 && (
-                          <div className="text-[10px] font-black text-orange-700 bg-orange-100 rounded px-2 py-0.5 mb-2 self-start">
-                            ✓ Đã chọn ×{selectedQty} — Click để thêm
+                          <div className="text-[9px] font-black text-[var(--color-brand)] bg-orange-500/10 border border-orange-500/20 rounded-md px-2 py-0.5 mb-2.5 self-start">
+                            ✓ Đã chọn ×{selectedQty}
                           </div>
                         )}
                         <div className="h-24 w-full flex justify-center mb-3">
-                          <img src={getImageUrl(item.image)} alt={item.name} className="max-h-full object-contain group-hover:scale-110 transition-transform" />
+                          <img src={getImageUrl(item.image)} alt={item.name} className="max-h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                         </div>
-                        <h4 className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug group-hover:text-[var(--color-brand)]">
+                        <h4 className="font-bold text-slate-200 text-xs line-clamp-2 leading-snug group-hover:text-[var(--color-brand)] transition-colors">
                           {item.name}
                         </h4>
-                        <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{item.specs}</p>
-                        <div className="mt-auto pt-3 flex justify-between items-center">
-                          <div className="font-bold text-[var(--color-brand)]">{fmt(item.price)}</div>
-                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors font-bold text-sm ${selectedQty > 0 ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-[var(--color-brand)] group-hover:text-white'}`}>
-                            {selectedQty > 0 ? selectedQty : <Plus className="w-4 h-4" />}
+                        <p className="text-[9px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.specs}</p>
+                        <div className="mt-auto pt-4 flex justify-between items-center">
+                          <div className="font-heading font-black text-[var(--color-brand)] text-glow-orange text-sm">{fmt(item.price)}</div>
+                          <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-all font-black text-xs ${selectedQty > 0 ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-[var(--color-brand)] group-hover:text-white'}`}>
+                            {selectedQty > 0 ? selectedQty : <Plus className="w-3.5 h-3.5" />}
                           </div>
                         </div>
                       </div>
@@ -346,15 +450,15 @@ export default function PCBuilder() {
 
             {/* Footer popup với nút Xong cho multi-slot */}
             {selectingSlotDef?.multi && (
-              <div className="p-4 border-t border-slate-100 bg-white rounded-b-2xl flex justify-between items-center">
-                <span className="text-sm text-slate-500">
-                  Đã chọn: <strong className="text-slate-800">
+              <div className="p-4 border-t border-glass bg-slate-900/60 flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-semibold">
+                  Đã chọn: <strong className="text-white text-glow-orange">
                     {(selectedParts[selectingSlot] || []).reduce((s, e) => s + e.qty, 0)}
-                  </strong> cái
+                  </strong> sản phẩm
                 </span>
                 <button
                   onClick={() => setSelectingSlot(null)}
-                  className="px-6 py-2 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-colors cursor-pointer"
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-glass font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
                   Xong ✓
                 </button>

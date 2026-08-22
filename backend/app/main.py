@@ -25,10 +25,21 @@ app = FastAPI(title="Website Linh Kiện E-commerce")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Trả về chuỗi traceback chi tiết lên frontend để debug Render
+    # Log traceback chi tiết ra server để điều tra lỗi
+    import logging
+    logging.error(f"SERVER ERROR: {str(exc)}")
+    traceback.print_exc()
+    
+    is_debug = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
+    if is_debug:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"SERVER ERROR: {str(exc)}"}
+        )
+        
     return JSONResponse(
         status_code=500,
-        content={"detail": f"SERVER ERROR: {str(exc)}"}
+        content={"detail": "Đã xảy ra sự cố hệ thống. Vui lòng thử lại sau hoặc liên hệ hỗ trợ!"}
     )
 
 
@@ -117,6 +128,15 @@ def checkout(order_data: schemas.OrderCreate, background_tasks: BackgroundTasks,
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/api/v1/payment/config")
+def get_payment_config():
+    return {
+        "bank_bin": os.getenv("BANK_BIN", "MBBank"),
+        "bank_account": os.getenv("BANK_ACCOUNT", "0799412960"),
+        "bank_account_name": os.getenv("BANK_ACCOUNT_NAME", "Vua Linh Kiện")
+    }
+
+
 @app.post("/api/v1/payment/webhook")
 async def payment_webhook(request: Request, data: schemas.SePayWebhookData, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
@@ -192,19 +212,51 @@ def read_laptop_compatibles(laptop_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/ai/diagnose", response_model=schemas.DiagnoseResponse)
 def diagnose_laptop(request: schemas.DiagnoseRequest, db: Session = Depends(get_db)):
-    db_laptop = db.query(models.LaptopModel).filter(models.LaptopModel.id == request.laptop_id).first()
-    if not db_laptop:
-        raise HTTPException(status_code=404, detail="Laptop not found")
-        
+    laptop_name = request.laptop_name or "Laptop Cá Nhân"
+    all_compatibles = []
+    
+    if request.laptop_id:
+        db_laptop = db.query(models.LaptopModel).filter(models.LaptopModel.id == request.laptop_id).first()
+        if db_laptop:
+            laptop_name = db_laptop.name
+            all_compatibles = crud.get_laptop_compatibles(db, request.laptop_id)
+
     import app.services.ai_service as ai_service
     try:
-        ai_result = ai_service.diagnose_laptop_issue(db_laptop.name, request.issue_description)
+        ai_result = ai_service.diagnose_laptop_issue(laptop_name, request.issue_description)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Lỗi kết nối hoặc xử lý từ bộ máy AI Gemini.")
         
-    all_compatibles = crud.get_laptop_compatibles(db, request.laptop_id)
     recommended_names_lower = [name.lower() for name in ai_result.get("recommended_category_names", [])]
-    filtered_compatibles = [c for c in all_compatibles if c["category_name"].lower() in recommended_names_lower]
+    
+    if all_compatibles:
+        filtered_compatibles = [c for c in all_compatibles if any(rec_name in c["category_name"].lower() for rec_name in recommended_names_lower)]
+    else:
+        # Lấy danh mục gợi ý linh kiện thực sự cần thiết từ kho sản phẩm Vua Linh Kiện (Ổ cứng, RAM)
+        filtered_compatibles = []
+        if recommended_names_lower:
+            categories = db.query(models.Category).all()
+            for cat in categories:
+                if any(rec_name in cat.name.lower() for rec_name in recommended_names_lower):
+                    # Nếu là danh mục Ổ Cứng, ưu tiên chọn đúng sản phẩm SSD cho Laptop
+                    if "ổ cứng" in cat.name.lower() or "ssd" in cat.name.lower():
+                        sample_product = db.query(models.Product).filter(
+                            models.Product.category_id == cat.id, 
+                            models.Product.is_active == True,
+                            models.Product.name.ilike("%SSD%")
+                        ).first()
+                        if not sample_product:
+                            sample_product = db.query(models.Product).filter(models.Product.category_id == cat.id, models.Product.is_active == True).first()
+                    else:
+                        sample_product = db.query(models.Product).filter(models.Product.category_id == cat.id, models.Product.is_active == True).first()
+
+                    if sample_product:
+                        filtered_compatibles.append({
+                            "category_id": cat.id,
+                            "category_name": cat.name,
+                            "sample_product": sample_product.name
+                        })
+
     return schemas.DiagnoseResponse(
         diagnosis=ai_result.get("diagnosis", "Vua Linh Kiện AI đã hoàn tất."),
         recommended_categories=filtered_compatibles
@@ -226,12 +278,16 @@ def validate_pc_build(request: schemas.PCBuildRequest):
     return schemas.PCBuildResponse(
         total_price=total,
         is_compatible=ai_res.get("is_compatible", False),
-        evaluation=ai_res.get("evaluation", "Máy chủ AI gặp sự cố.")
+        evaluation=ai_res.get("evaluation", "Máy chủ AI đã hoàn tất phân tích."),
+        summary=ai_res.get("summary"),
+        suitability=ai_res.get("suitability"),
+        details=ai_res.get("details")
     )
 
 @app.post("/api/v1/ai/recommend-build", response_model=schemas.BuildRecommendResponse)
 def recommend_build(request: schemas.BuildRecommendRequest, db: Session = Depends(get_db)):
-    """Nhận yêu cầu build PC từ chat, gọi AI phân tích, rồi truy DB lấy sản phẩm thực tế."""
+    """Nhận yêu cầu build PC từ chat, gọi AI phân tích, rồi truy DB lấy sản phẩm thực tế theo độ tương thích phần cứng chuẩn xác."""
+    import re
     import app.services.ai_service as ai_service
 
     try:
@@ -252,38 +308,124 @@ def recommend_build(request: schemas.BuildRecommendRequest, db: Session = Depend
             )
         raise HTTPException(status_code=500, detail=f"AI Service lỗi: {str(e)[:100]}")
 
-    result_products = []
-    components = ai_result.get("components", [])
+    components_budget = {comp.get("category"): comp.get("price_max", 99_999_999) for comp in ai_result.get("components", [])}
+    categories = {c.name: c.id for c in db.query(models.Category).all()}
 
-    for comp in components:
-        cat_name = comp.get("category", "")
-        price_max = comp.get("price_max", 99_999_999)
+    def _extract_socket(specs: str):
+        if not specs: return None
+        for s in ['AM5', 'AM4', 'LGA1700', 'LGA1200', 'LGA1151']:
+            if s in specs.upper(): return s
+        return None
 
-        cat = db.query(models.Category).filter(models.Category.name == cat_name).first()
-        if not cat:
-            continue
+    def _extract_ddr(specs: str):
+        if not specs: return None
+        if 'DDR5' in specs.upper(): return 'DDR5'
+        if 'DDR4' in specs.upper(): return 'DDR4'
+        return None
 
-        # Lấy sản phẩm có giá tốt nhất (cao nhất trong ngưỡng) còn hàng
-        product = (
+    def _extract_wattage(specs: str):
+        if not specs: return 0
+        match = re.search(r'(\d+)\s*W', specs, re.IGNORECASE)
+        return int(match.group(1)) if match else 0
+
+    selected_map = {}
+
+    # 1. Chọn CPU (Ưu tiên theo ngân sách)
+    cpu_max = components_budget.get("CPU", 99_999_999)
+    cpu_cat_id = categories.get("CPU")
+    cpu = (
+        db.query(models.Product)
+        .filter(models.Product.category_id == cpu_cat_id, models.Product.price <= cpu_max, models.Product.stock > 0)
+        .order_by(models.Product.price.desc())
+        .first()
+    )
+    if not cpu:
+        cpu = db.query(models.Product).filter(models.Product.category_id == cpu_cat_id, models.Product.stock > 0).order_by(models.Product.price.asc()).first()
+    selected_map["CPU"] = cpu
+
+    cpu_socket = _extract_socket(cpu.specs if cpu else "")
+
+    # 2. Chọn Mainboard (BẮT BUỘC khớp đúng Socket với CPU)
+    mb_max = components_budget.get("Mainboard", 99_999_999)
+    mb_cat_id = categories.get("Mainboard")
+    mb_q = db.query(models.Product).filter(models.Product.category_id == mb_cat_id, models.Product.stock > 0)
+    if cpu_socket:
+        mb_q = mb_q.filter(models.Product.specs.like(f"%{cpu_socket}%"))
+    mb = mb_q.filter(models.Product.price <= mb_max).order_by(models.Product.price.desc()).first()
+    if not mb:
+        mb = mb_q.order_by(models.Product.price.asc()).first()
+    if not mb:
+        mb = db.query(models.Product).filter(models.Product.category_id == mb_cat_id, models.Product.stock > 0).first()
+    selected_map["Mainboard"] = mb
+
+    mb_ddr = _extract_ddr(mb.specs if mb else "")
+
+    # 3. Chọn RAM (BẮT BUỘC khớp chuẩn DDR4 / DDR5 với Mainboard)
+    ram_max = components_budget.get("RAM", 99_999_999)
+    ram_cat_id = categories.get("RAM")
+    ram_q = db.query(models.Product).filter(models.Product.category_id == ram_cat_id, models.Product.stock > 0)
+    if mb_ddr:
+        ram_q = ram_q.filter(models.Product.specs.like(f"%{mb_ddr}%"))
+    ram = ram_q.filter(models.Product.price <= ram_max).order_by(models.Product.price.desc()).first()
+    if not ram:
+        ram = ram_q.order_by(models.Product.price.asc()).first()
+    if not ram:
+        ram = db.query(models.Product).filter(models.Product.category_id == ram_cat_id, models.Product.stock > 0).first()
+    selected_map["RAM"] = ram
+
+    # 4. Chọn Card Đồ Họa (VGA)
+    vga_max = components_budget.get("VGA", 99_999_999)
+    vga_cat_id = categories.get("VGA")
+    vga = (
+        db.query(models.Product)
+        .filter(models.Product.category_id == vga_cat_id, models.Product.price <= vga_max, models.Product.stock > 0)
+        .order_by(models.Product.price.desc())
+        .first()
+    )
+    if not vga:
+        vga = db.query(models.Product).filter(models.Product.category_id == vga_cat_id, models.Product.stock > 0).order_by(models.Product.price.asc()).first()
+    selected_map["VGA"] = vga
+
+    # 5. Chọn Nguồn (PSU) - Đảm bảo đủ công suất tổng TDP CPU + VGA + 150W
+    cpu_tdp = _extract_wattage(cpu.specs if cpu else "") or 65
+    vga_tdp = _extract_wattage(vga.specs if vga else "") or 150
+    min_psu_watt = cpu_tdp + vga_tdp + 150
+
+    psu_max = components_budget.get("Nguồn (PSU)", 99_999_999)
+    psu_cat_id = categories.get("Nguồn (PSU)")
+    psu_prods = db.query(models.Product).filter(models.Product.category_id == psu_cat_id, models.Product.stock > 0).all()
+    valid_psus = [p for p in psu_prods if _extract_wattage(p.specs or p.name) >= min_psu_watt]
+    if not valid_psus:
+        valid_psus = psu_prods
+    
+    valid_psus_in_budget = [p for p in valid_psus if p.price <= psu_max]
+    if valid_psus_in_budget:
+        psu = max(valid_psus_in_budget, key=lambda p: p.price)
+    elif valid_psus:
+        psu = min(valid_psus, key=lambda p: p.price)
+    else:
+        psu = None
+    selected_map["Nguồn (PSU)"] = psu
+
+    # 6. Các linh kiện còn lại: Ổ Cứng, Vỏ Case, Tản Nhiệt
+    for cat_name in ["Ổ Cứng", "Vỏ Case", "Tản Nhiệt"]:
+        c_max = components_budget.get(cat_name, 99_999_999)
+        c_id = categories.get(cat_name)
+        prod = (
             db.query(models.Product)
-            .filter(
-                models.Product.category_id == cat.id,
-                models.Product.price <= price_max,
-                models.Product.stock > 0
-            )
+            .filter(models.Product.category_id == c_id, models.Product.price <= c_max, models.Product.stock > 0)
             .order_by(models.Product.price.desc())
             .first()
         )
+        if not prod:
+            prod = db.query(models.Product).filter(models.Product.category_id == c_id, models.Product.stock > 0).order_by(models.Product.price.asc()).first()
+        selected_map[cat_name] = prod
 
-        # Fallback: lấy rẻ nhất trong danh mục nếu không tìm thấy trong ngưỡng
-        if not product:
-            product = (
-                db.query(models.Product)
-                .filter(models.Product.category_id == cat.id, models.Product.stock > 0)
-                .order_by(models.Product.price.asc())
-                .first()
-            )
-
+    # Build final list preserving standard category order
+    ORDERED_CATEGORIES = ["CPU", "Mainboard", "RAM", "VGA", "Nguồn (PSU)", "Ổ Cứng", "Vỏ Case", "Tản Nhiệt"]
+    result_products = []
+    for cat_name in ORDERED_CATEGORIES:
+        product = selected_map.get(cat_name)
         if product:
             result_products.append({
                 "category": cat_name,
@@ -298,3 +440,4 @@ def recommend_build(request: schemas.BuildRecommendRequest, db: Session = Depend
         products=result_products,
         total=total
     )
+

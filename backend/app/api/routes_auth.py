@@ -18,8 +18,18 @@ router = APIRouter()
 
 @router.post("/register", response_model=schemas.UserResponse)
 def register(user_in: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    if db.query(models.User).filter(models.User.email == user_in.email).first():
-        raise HTTPException(status_code=400, detail="Email này đã được đăng ký. Vui lòng dùng email khác!")
+    existing_user = db.query(models.User).filter(models.User.email == user_in.email).first()
+    if existing_user:
+        # Nếu email đã tồn tại nhưng có password_hash trống (tài khoản tạm từ Guest Checkout),
+        # cho phép nâng cấp thành tài khoản chính thức.
+        if not existing_user.password_hash or existing_user.password_hash == "":
+            existing_user.full_name = user_in.full_name
+            existing_user.password_hash = auth.get_password_hash(user_in.password)
+            db.commit()
+            db.refresh(existing_user)
+            return existing_user
+        else:
+            raise HTTPException(status_code=400, detail="Email này đã được đăng ký. Vui lòng dùng email khác!")
 
     new_user = models.User(
         email=user_in.email,
@@ -104,7 +114,7 @@ def refresh_token(
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="refresh_token", samesite="lax")
+    response.delete_cookie(key="refresh_token", samesite="lax", httponly=True)
     return {"message": "Đăng xuất thành công!"}
 
 # ─── GET ME ──────────────────────────────────────────────────────────────────
@@ -126,9 +136,9 @@ def forgot_password(
     if not user:
         return {"message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP đặt lại mật khẩu!"}
 
-    # Tạo OTP ngẫu nhiên 6 số, hết hạn sau 15 phút
-    otp_code = str(random.randint(100000, 999999))
-    expires_at = dt.datetime.utcnow() + dt.timedelta(minutes=15)
+    # Tạo OTP ngẫu nhiên 6 số bằng secrets bảo mật hơn
+    otp_code = "".join(secrets.choice("0123456789") for _ in range(6))
+    expires_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None) + dt.timedelta(minutes=15)
 
     # Xóa token cũ chưa dùng của user này
     db.query(models.PasswordResetToken).filter(
@@ -169,7 +179,7 @@ def reset_password(
         raise HTTPException(status_code=400, detail="Mã OTP không hợp lệ. Vui lòng yêu cầu lại!")
     if reset_record.is_used:
         raise HTTPException(status_code=400, detail="Mã OTP này đã được sử dụng rồi. Vui lòng yêu cầu mã mới!")
-    if dt.datetime.utcnow() > reset_record.expires_at:
+    if dt.datetime.now(dt.timezone.utc).replace(tzinfo=None) > reset_record.expires_at:
         raise HTTPException(status_code=400, detail="Mã OTP đã hết hạn (15 phút). Vui lòng yêu cầu mã mới!")
 
     if len(request.new_password) < 6:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from typing import List
 from datetime import datetime, timedelta
@@ -23,9 +23,10 @@ def get_dashboard_stats(db: Session = Depends(database.get_db), current_admin: m
     total_users = db.query(models.User).filter(models.User.role == "customer").count()
     total_orders = db.query(models.Order).count()
     
-    # Calculate total revenue from PAID and DELIVERED orders
+    # Calculate total revenue from PAID, DELIVERED, SHIPPED and PROCESSING (đã cọc 30%) orders
+    valid_revenue_statuses = ["PAID", "DELIVERED", "SHIPPED", "PROCESSING"]
     revenue = db.query(func.sum(models.Order.total_amount)).filter(
-        models.Order.status.in_(["PAID", "DELIVERED", "SHIPPED"])
+        models.Order.status.in_(valid_revenue_statuses)
     ).scalar() or 0.0
 
     low_stock = db.query(models.Product).filter(models.Product.stock < 10).count()
@@ -37,7 +38,7 @@ def get_dashboard_stats(db: Session = Depends(database.get_db), current_admin: m
     
     orders_14d = db.query(models.Order).filter(
         models.Order.created_at >= start_date,
-        models.Order.status.in_(["PAID", "DELIVERED", "SHIPPED"])
+        models.Order.status.in_(valid_revenue_statuses)
     ).all()
     
     revenue_by_date = {}
@@ -64,15 +65,32 @@ def get_dashboard_stats(db: Session = Depends(database.get_db), current_admin: m
 
 @router.post("/upload-image")
 def upload_image(file: UploadFile = File(...), current_admin: models.User = admin_deps):
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    
+    ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'jpg'
+    if ext not in ALLOWED_EXTENSIONS or not (file.content_type or '').startswith('image/'):
+        raise HTTPException(
+            status_code=400, 
+            detail="Định dạng file không hợp lệ! Chỉ cho phép upload ảnh (png, jpg, jpeg, gif, webp)."
+        )
+        
     upload_dir = "static/uploads"
     os.makedirs(upload_dir, exist_ok=True)
     
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
     new_filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(upload_dir, new_filename)
     
+    # Đọc và kiểm tra kích thước file an toàn
+    contents = file.file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="Dung lượng file vượt quá giới hạn tối đa cho phép (5MB)!"
+        )
+        
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
         
     return {"url": f"/static/uploads/{new_filename}"}
 
@@ -130,7 +148,7 @@ def create_user(
     new_user = models.User(
         email=user_data.email,
         full_name=user_data.full_name,
-        hashed_password=hashed_pwd,
+        password_hash=hashed_pwd,
         role=user_data.role,
         is_active=user_data.is_active,
         phone_number=user_data.phone_number
@@ -157,7 +175,7 @@ def update_user(
             raise HTTPException(status_code=400, detail="Email mới đã được sử dụng")
             
     if user_data.password:
-        user.hashed_password = auth.get_password_hash(user_data.password)
+        user.password_hash = auth.get_password_hash(user_data.password)
         
     if user_data.full_name is not None: user.full_name = user_data.full_name
     if user_data.email is not None: user.email = user_data.email
@@ -219,13 +237,22 @@ def get_all_orders(
             )
 
     total = query.count()
-    orders = query.order_by(models.Order.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    orders = (
+        query.options(
+            joinedload(models.Order.items).joinedload(models.OrderItem.product),
+            joinedload(models.Order.user)
+        )
+        .order_by(models.Order.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
 
     result = []
     for order in orders:
         items_detail = []
         for oi in order.items:
-            product = db.query(models.Product).filter(models.Product.id == oi.product_id).first()
+            product = oi.product
             items_detail.append({
                 "product_id": oi.product_id,
                 "product_name": product.name if product else "Sản phẩm đã xóa",
@@ -241,7 +268,13 @@ def get_all_orders(
             "id": order.id,
             "total_amount": order.total_amount,
             "status": order.status,
-            "shipping_address": order.shipping_address or user_email,
+            "payment_method": order.payment_method,
+            "payment_status": order.payment_status,
+            "shipping_address": order.shipping_address,
+            "receiver_name": order.receiver_name or (order.user.full_name if order.user else "Khách vãng lai"),
+            "receiver_phone": order.receiver_phone or (order.user.phone_number if order.user else ""),
+            "note": order.note or "",
+            "user_email": user_email,
             "created_at": order.created_at.strftime("%d/%m/%Y %H:%M") if order.created_at else "",
             "items": items_detail
         })
@@ -261,15 +294,32 @@ def update_order_status(
     db: Session = Depends(database.get_db), 
     current_admin: models.User = admin_deps
 ):
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    order = db.query(models.Order).options(joinedload(models.Order.items)).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
     
-    valid_statuses = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
+    valid_statuses = ["PENDING", "PROCESSING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
     if update_data.status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Trạng thái không hợp lệ")
 
-    order.status = update_data.status
+    old_status = order.status
+    new_status = update_data.status
+
+    # 1. Nếu đơn hàng bị chuyển sang CANCELLED từ trạng thái chưa hủy -> Hoàn lại kho sản phẩm (Restock)
+    if new_status == "CANCELLED" and old_status != "CANCELLED":
+        for item in order.items:
+            product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+            if product:
+                product.stock += item.quantity
+
+    # 2. Nếu đơn hàng từ CANCELLED được phục hồi sang trạng thái khác -> Trừ lại kho (Deduct stock)
+    elif old_status == "CANCELLED" and new_status != "CANCELLED":
+        for item in order.items:
+            product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+            if product:
+                product.stock = max(0, product.stock - item.quantity)
+
+    order.status = new_status
     db.commit()
     db.refresh(order)
     return {"message": "Cập nhật trạng thái thành công", "new_status": order.status}

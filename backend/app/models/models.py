@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, DateTime, Enum, Boolean
 from sqlalchemy.orm import relationship
 import datetime
+
+def get_utc_now():
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
 from app.core.database import Base
 
 class User(Base):
@@ -12,7 +16,7 @@ class User(Base):
     phone_number = Column(String(20), nullable=True)
     role = Column(String(50), default="customer")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     orders = relationship("Order", back_populates="user")
 
@@ -23,7 +27,7 @@ class PasswordResetToken(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
 
 class Category(Base):
@@ -53,13 +57,16 @@ class Product(Base):
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    receiver_name = Column(String(100), nullable=True)
+    receiver_phone = Column(String(20), nullable=True)
+    note = Column(Text, nullable=True)
     total_amount = Column(Float, default=0.0)
     status = Column(String(50), default="PENDING") # PENDING, SHIPPED, DELIVERED, CANCELLED
     payment_method = Column(String(50), default="COD") # COD, VNPAY, SEPAY
     payment_status = Column(String(50), default="UNPAID") # UNPAID, PAID, FAILED
     shipping_address = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
     
     user = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
@@ -100,7 +107,7 @@ class ProductReview(Base):
     rating = Column(Integer, default=5)
     comment = Column(Text, nullable=True)
     image = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     product = relationship("Product", back_populates="reviews")
     user = relationship("User")

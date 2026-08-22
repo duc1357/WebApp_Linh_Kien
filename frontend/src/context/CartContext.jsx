@@ -1,12 +1,27 @@
-import React, { createContext, useState, useCallback, useContext } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 
 export const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vlk_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vlk_cart', JSON.stringify(cartItems));
+    } catch (e) {
+      console.error("Lỗi lưu giỏ hàng vào localStorage:", e);
+    }
+  }, [cartItems]);
 
   const addToCart = useCallback((product) => {
     setCartItems(prev => {
@@ -44,9 +59,13 @@ export const CartProvider = ({ children }) => {
     setCartItems(prev => prev.filter(i => i.product.id !== productId));
   }, []);
 
-  const clearCart = useCallback(() => setCartItems([]), []);
+  const clearCart = useCallback(() => {
+    setCartItems([]);
+    localStorage.removeItem('vlk_cart');
+  }, []);
 
   const totalCartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const totalValue = cartItems.reduce((acc, i) => acc + ((i.product?.price || 0) * i.quantity), 0);
 
   return (
     <CartContext.Provider value={{
@@ -57,6 +76,7 @@ export const CartProvider = ({ children }) => {
       removeItem,
       clearCart,
       totalCartCount,
+      totalValue,
       isCartOpen,
       setIsCartOpen
     }}>
@@ -64,3 +84,4 @@ export const CartProvider = ({ children }) => {
     </CartContext.Provider>
   );
 };
+

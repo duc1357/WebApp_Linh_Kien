@@ -2,24 +2,26 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { User, Phone, Lock, Eye, EyeOff, Save, Loader2, CheckCircle, AlertCircle, ShoppingBag, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { AuthContext } from "../context/AuthContext.jsx";
-import api from "../api/axios";
+import api, { getImageUrl } from "../api/axios";
 
 const fmt = (price) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 const STATUS_CONFIG = {
-  PENDING:   { label: 'Chờ xác nhận', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-  PAID:      { label: 'Đã thanh toán', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-  SHIPPED:   { label: 'Đang giao hàng', color: 'text-teal-700 bg-teal-50 border-teal-200' },
-  DELIVERED: { label: 'Đã giao', color: 'text-green-700 bg-green-50 border-green-200' },
-  CANCELLED: { label: 'Đã hủy', color: 'text-red-700 bg-red-50 border-red-200' },
+  PENDING:    { label: 'Chờ xác nhận', color: 'text-amber-400 bg-amber-500/10 border-amber-500/25' },
+  PROCESSING: { label: 'Đã cọc 30% / Đang xử lý', color: 'text-purple-400 bg-purple-500/10 border-purple-500/25' },
+  DEPOSITED:  { label: 'Đã cọc 30%', color: 'text-purple-400 bg-purple-500/10 border-purple-500/25' },
+  PAID:       { label: 'Đã thanh toán', color: 'text-blue-400 bg-blue-500/10 border-blue-500/25' },
+  SHIPPED:    { label: 'Đang giao hàng', color: 'text-teal-400 bg-teal-500/10 border-teal-500/25' },
+  DELIVERED:  { label: 'Đã giao thành công', color: 'text-green-400 bg-green-500/10 border-green-500/25' },
+  CANCELLED:  { label: 'Đã hủy', color: 'text-red-400 bg-red-500/10 border-red-500/25' },
 };
 
 function Alert({ type, message }) {
   if (!message) return null;
   const isSuccess = type === 'success';
   return (
-    <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm ${isSuccess ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+    <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm ${isSuccess ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
       {isSuccess ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
       {message}
     </div>
@@ -50,25 +52,25 @@ function InfoTab({ user, onUpdate }) {
     <form onSubmit={handleSubmit} className="space-y-5">
       <Alert type={feedback.type} message={feedback.msg} />
       <div>
-        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Email (không thể thay đổi)</label>
-        <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 bg-slate-100 border-2 border-slate-200 rounded-xl text-slate-400 font-medium cursor-not-allowed" />
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Email (không thể thay đổi)</label>
+        <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 bg-slate-950/40 border border-glass rounded-xl text-slate-500 font-medium cursor-not-allowed" />
       </div>
       <div>
-        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Họ và tên</label>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Họ và tên</label>
         <div className="relative">
-          <User className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-          <input type="text" placeholder="Nhập họ và tên" className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all font-medium text-slate-700" value={fullName} onChange={e => setFullName(e.target.value)} />
+          <User className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Nhập họ và tên" className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-glass rounded-xl outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all font-medium text-slate-200 text-sm" value={fullName} onChange={e => setFullName(e.target.value)} />
         </div>
       </div>
       <div>
-        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Số điện thoại</label>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Số điện thoại</label>
         <div className="relative">
-          <Phone className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-          <input type="tel" placeholder="Nhập số điện thoại" className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all font-medium text-slate-700" value={phone} onChange={e => setPhone(e.target.value)} />
+          <Phone className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+          <input type="tel" placeholder="Nhập số điện thoại" className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-glass rounded-xl outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all font-medium text-slate-200 text-sm" value={phone} onChange={e => setPhone(e.target.value)} />
         </div>
       </div>
-      <button type="submit" disabled={loading} className="w-full bg-slate-900 hover:bg-black text-white font-black py-3.5 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 cursor-pointer">
-        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4" />LƯU THAY ĐỔI</>}
+      <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-3.5 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 cursor-pointer text-xs">
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" />LƯU THAY ĐỔI</>}
       </button>
     </form>
   );
@@ -99,7 +101,7 @@ function PasswordTab() {
     setLoading(false);
   };
 
-  const inputClass = "w-full pl-11 pr-11 py-3 bg-white border-2 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all font-medium text-slate-700";
+  const inputClass = "w-full pl-10 pr-11 py-3 bg-slate-900 border border-glass rounded-xl outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all font-medium text-slate-200 text-sm";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -110,18 +112,18 @@ function PasswordTab() {
         { label: 'Xác nhận mật khẩu mới', value: confirmPw, onChange: setConfirmPw, placeholder: 'Nhập lại mật khẩu mới' },
       ].map(({ label, value, onChange, placeholder }) => (
         <div key={label}>
-          <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+            <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
             <input type={showPw ? 'text' : 'password'} placeholder={placeholder} required className={inputClass} value={value} onChange={e => onChange(e.target.value)} />
-            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 cursor-pointer">
-              {showPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-200 cursor-pointer">
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
       ))}
-      <button type="submit" disabled={loading} className="w-full bg-slate-900 hover:bg-black text-white font-black py-3.5 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 cursor-pointer">
-        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ĐỔI MẬT KHẨU'}
+      <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-3.5 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 cursor-pointer text-xs">
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ĐỔI MẬT KHẨU'}
       </button>
     </form>
   );
@@ -140,14 +142,14 @@ function OrdersTab() {
 
   if (loading) return (
     <div className="space-y-4">
-      {[1,2,3].map(n => <div key={n} className="h-20 bg-slate-100 rounded-xl animate-pulse" />)}
+      {[1,2,3].map(n => <div key={n} className="h-20 bg-glass border border-glass rounded-xl animate-pulse" />)}
     </div>
   );
 
   if (orders.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-400">
+    <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-500">
       <ShoppingBag className="w-16 h-16 opacity-20" />
-      <p className="font-semibold">Bạn chưa có đơn hàng nào.</p>
+      <p className="font-semibold text-sm">Bạn chưa có đơn hàng nào.</p>
     </div>
   );
 
@@ -155,27 +157,27 @@ function OrdersTab() {
     <div className="space-y-4">
       {orders.map(order => {
         const isExpanded = expandedId === order.id;
-        const statusCfg = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-slate-600 bg-slate-50 border-slate-200' };
+        const statusCfg = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-slate-400 bg-white/5 border-glass' };
         return (
-          <div key={order.id} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div key={order.id} className="border border-glass rounded-2xl overflow-hidden shadow-lg bg-slate-900/10 hover:border-orange-500/15 transition-all">
             {/* Header đơn hàng */}
             <button
               onClick={() => setExpandedId(isExpanded ? null : order.id)}
-              className="w-full text-left px-4 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+              className="w-full text-left px-4 py-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer bg-slate-900/20"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center justify-center">
                   <Package className="w-5 h-5 text-[var(--color-brand)]" />
                 </div>
                 <div>
-                  <p className="font-black text-slate-800 text-sm">Đơn hàng #{order.id}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{order.created_at}</p>
+                  <p className="font-black text-slate-200 text-sm">Đơn hàng #{order.id}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{order.created_at}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="font-black text-[var(--color-brand)] text-sm">{fmt(order.total_amount)}</p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusCfg.color}`}>
+                  <p className="font-heading font-black text-[var(--color-brand)] text-sm text-glow-orange">{fmt(order.total_amount)}</p>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${statusCfg.color} uppercase tracking-wider`}>
                     {statusCfg.label}
                   </span>
                 </div>
@@ -185,23 +187,23 @@ function OrdersTab() {
 
             {/* Chi tiết sản phẩm */}
             {isExpanded && (
-              <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3 animate-in slide-in-from-top-2 duration-200">
+              <div className="border-t border-glass bg-slate-950/40 px-4 py-3 animate-in slide-in-from-top-2 duration-200">
                 {order.shipping_address && (
-                  <p className="text-xs text-slate-500 mb-3 font-medium">
+                  <p className="text-xs text-slate-400 mb-3 font-semibold">
                     📍 {order.shipping_address}
                   </p>
                 )}
                 <div className="space-y-2">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-slate-100">
+                    <div key={idx} className="flex items-center gap-3 bg-slate-900/30 rounded-xl p-3 border border-glass">
                       {item.product_image && (
-                        <img src={item.product_image} alt={item.product_name} className="w-12 h-12 object-contain bg-slate-50 rounded-lg border border-slate-100 p-1 shrink-0" />
+                        <img src={getImageUrl(item.product_image)} alt={item.product_name} className="w-12 h-12 object-contain bg-white rounded-lg border border-glass p-1 shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 line-clamp-1">{item.product_name}</p>
-                        <p className="text-xs text-slate-400">x{item.quantity} × {fmt(item.price_at_purchase)}</p>
+                        <p className="text-xs font-bold text-slate-200 line-clamp-1 leading-snug">{item.product_name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">x{item.quantity} × {fmt(item.price_at_purchase)}</p>
                       </div>
-                      <p className="text-sm font-black text-[var(--color-brand)] shrink-0">
+                      <p className="text-xs font-black text-[var(--color-brand)] shrink-0 text-glow-orange">
                         {fmt(item.price_at_purchase * item.quantity)}
                       </p>
                     </div>
@@ -237,36 +239,37 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header card */}
-        <div className="bg-slate-900 rounded-2xl p-6 mb-6 flex items-center gap-4 text-white shadow-xl">
-          <div className="w-16 h-16 bg-[var(--color-brand)] rounded-full flex items-center justify-center text-3xl font-black shadow-lg">
+        <div className="bg-glass border border-glass rounded-2xl p-6 mb-6 flex items-center gap-4 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl" />
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shadow-lg shadow-orange-500/20">
             {user?.full_name?.[0]?.toUpperCase() || '?'}
           </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tight">{user?.full_name}</h1>
-            <p className="text-slate-400 text-sm">{user?.email}</p>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-1 inline-block ${user?.role === 'admin' ? 'bg-amber-500 text-amber-950' : 'bg-slate-700 text-slate-300'}`}>
+          <div className="relative z-10">
+            <h1 className="text-lg font-heading font-black tracking-tight">{user?.full_name}</h1>
+            <p className="text-slate-400 text-xs mt-0.5">{user?.email}</p>
+            <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-lg mt-2 inline-block uppercase tracking-wider border ${user?.role === 'admin' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-300 border-glass'}`}>
               {user?.role === 'admin' ? '👑 Admin' : '👤 Khách hàng'}
             </span>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          <div className="flex border-b border-slate-100 overflow-x-auto">
+        <div className="bg-glass border border-glass rounded-3xl shadow-2xl overflow-hidden">
+          <div className="flex border-b border-glass overflow-x-auto bg-slate-900/15">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 py-4 text-sm font-black transition-colors whitespace-nowrap px-2 cursor-pointer ${activeTab === tab.key ? 'text-[var(--color-brand)] border-b-2 border-[var(--color-brand)]' : 'text-slate-400 hover:text-slate-700'}`}
+                className={`flex-1 py-4 text-xs font-black transition-all whitespace-nowrap px-2 cursor-pointer border-b-2 ${activeTab === tab.key ? 'text-[var(--color-brand)] border-[var(--color-brand)] text-glow-orange bg-orange-500/5' : 'text-slate-500 border-transparent hover:text-slate-200'}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="p-6">
+          <div className="p-6 bg-slate-950/20">
             {activeTab === 'info'     && <InfoTab user={user} onUpdate={handleUserUpdate} />}
             {activeTab === 'orders'   && <OrdersTab />}
             {activeTab === 'password' && <PasswordTab />}

@@ -1,67 +1,97 @@
 import os
 import json
+import re
+from typing import Optional
+from dotenv import load_dotenv
 from google import genai  # type: ignore[import-untyped]
 
-# Danh sách model theo thứ tự ưu tiên (thử từng cái cho đến khi thành công)
+load_dotenv()
+
+
 _MODELS = [
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
     "gemini-2.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
     "gemini-flash-lite-latest",
     "gemini-flash-latest",
 ]
 
+_client_instance: Optional[genai.Client] = None
+
+def _get_genai_client() -> genai.Client:
+    """Khởi tạo hoặc tái sử dụng Gemini Client (Singleton)."""
+    global _client_instance
+    if _client_instance is None:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        _client_instance = genai.Client(api_key=api_key)
+    return _client_instance
+
+def _extract_json_string(raw: str) -> str:
+    """Bóc tách chuỗi JSON sạch từ phản hồi thô của AI Gemini."""
+    text = raw.strip()
+    # 1. Bóc từ code block ```json ... ```
+    if "```json" in text:
+        match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+    elif "```" in text:
+        match = re.search(r'```\s*(.*?)\s*```', text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+
+    # 2. Bóc từ dấu ngoặc nhọn { đầu tiên đến dấu } cuối cùng
+    start_idx = text.find('{')
+    end_idx = text.rfind('}')
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        return text[start_idx:end_idx + 1].strip()
+
+    return text
 
 def _call_gemini(prompt: str) -> str:
     """Gọi Gemini API, thử lần lượt các model cho đến khi thành công."""
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
+    client = _get_genai_client()
     last_error = None
 
     for model in _MODELS:
         try:
             response = client.models.generate_content(model=model, contents=prompt)
-            import re
-            raw = response.text.strip()
-            # Trích xuất nội dung giữa { và } để tránh các đoạn text chào hỏi thừa của AI
-            match = re.search(r'\{.*\}', raw, re.DOTALL)
-            if match:
-                raw = match.group(0)
-            elif raw.startswith("```json"):
-                raw = raw[7:]
-                if raw.endswith("```"):
-                    raw = raw[:-3]
-            elif raw.startswith("```"):
-                raw = raw[3:]
-                if raw.endswith("```"):
-                    raw = raw[:-3]
-            return raw.strip()
+            raw = response.text or ""
+            return _extract_json_string(raw)
         except Exception as e:
             last_error = e
-            err_str = str(e)
-            # Nếu quota hết (429) hoặc quá tải (503) → thử model tiếp theo
-            if any(code in err_str for code in ["429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE"]):
+            err_str = str(e).upper()
+            # Nếu model không tồn tại (404), hết quota (429), quá tải (503) hoặc tạm thời lỗi -> thử model tiếp theo
+            if any(code in err_str for code in ["404", "429", "503", "500", "NOT_FOUND", "RESOURCE_EXHAUSTED", "UNAVAILABLE"]):
                 continue
-            # Lỗi khác (400, 404) → không thử tiếp
+            # Lỗi khác (400 Bad Request) -> dừng
             raise
 
-    # Tất cả model đều bị quota/quá tải
-    raise RuntimeError(f"quota_exhausted: {last_error}")
+    # Tất cả model đều không khả dụng
+    raise RuntimeError(f"Tất cả model Gemini đều không phản hồi: {last_error}")
+
 
 
 def diagnose_laptop_issue(laptop_name: str, issue_description: str) -> dict:
     """Chẩn đoán lỗi laptop và gợi ý danh mục linh kiện cần mua."""
     prompt = f"""
-    Bạn là một kỹ thuật viên sửa chữa máy tính chuyên nghiệp của "Vua Linh Kiện".
-    Khách hàng đang dùng máy '{laptop_name}' và gặp vấn đề: '{issue_description}'.
+    Bạn là một kỹ thuật viên phần cứng máy tính & laptop chuyên nghiệp của "Vua Linh Kiện".
+    Khách hàng đang dùng Laptop '{laptop_name}' và gặp sự cố: '{issue_description}'.
 
-    Hãy đưa ra chẩn đoán nguyên nhân ngắn gọn bằng tiếng Việt.
-    Sau đó đề xuất danh mục linh kiện cần mua từ danh sách:
-    RAM, Ổ Cứng, Tản Nhiệt, VGA, CPU, Mainboard, Nguồn (PSU), Vỏ Case
+    YÊU CẦU BẮT BỘC:
+    1. Đưa ra chẩn đoán nguyên nhân kỹ thuật ngắn gọn, chính xác bằng tiếng Việt.
+    2. QUY TẮC PHÂN LOẠI LINH KIỆN:
+       - Nếu sự cố liên quan đến "tràn RAM / thiếu RAM / lag giật do mở nhiều tab web/ứng dụng": 
+         + Với Laptop thông thường nâng cấp được (Dell, Asus, HP, Acer, Lenovo... có khe RAM rời): Đề xuất nâng cấp **RAM**.
+         + Với MacBook M1/M2/M3 (Apple Silicon) hoặc máy hàn RAM cố định: Giải thích rõ máy dùng RAM hợp nhất (Unified Memory) hàn chết trên bo mạch nên KHÔNG THỂ nâng cấp RAM vật lý sau khi mua, khuyên khách tắt bớt app ngầm hoặc restart máy, và để "recommended_category_names" là [].
+       - Nếu sự cố liên quan đến "đầy bộ nhớ lưu trữ / hết dung lượng ổ đĩa / ổ C báo đỏ": Đề xuất nâng cấp **Ổ Cứng** (SSD).
+       - Nếu sự cố liên quan đến "nóng máy/nhiệt độ cao": Hướng dẫn khách vệ sinh tra keo tản nhiệt laptop hoặc dùng đế tản nhiệt. KHÔNG gợi ý RAM/Ổ Cứng, để "recommended_category_names" là [].
+
+    Trong trường "recommended_category_names", CHỈ ĐƯỢC CHỌN từ: ["RAM", "Ổ Cứng"] hoặc để mảng rỗng [] nếu máy không nâng cấp được hoặc sự cố không cần thay linh kiện này.
 
     Trả về JSON raw (không markdown):
     {{
-        "diagnosis": "lời chẩn đoán nguyên nhân bằng TV",
-        "recommended_category_names": ["RAM", "Ổ Cứng"]
+        "diagnosis": "lời chẩn đoán nguyên nhân và giải pháp kỹ thuật chuẩn xác bằng Tiếng Việt",
+        "recommended_category_names": ["RAM"]
     }}
     """
     try:
@@ -77,22 +107,46 @@ def diagnose_laptop_issue(laptop_name: str, issue_description: str) -> dict:
 def evaluate_pc_build(items_list: list) -> dict:
     """Đánh giá tính tương thích của bộ linh kiện PC Builder."""
     prompt = f"""
-    Bạn là chuyên gia phần cứng Build PC của "Vua Linh Kiện".
-    Khách hàng đã chọn các linh kiện sau:
+    Bạn là chuyên gia kỹ thuật phần cứng Build PC của "Vua Linh Kiện".
+    Khách hàng đã chọn danh sách linh kiện sau:
     {json.dumps(items_list, ensure_ascii=False, indent=2)}
 
-    Hãy đánh giá:
-    1. Bộ linh kiện có ráp lại CHẠY ĐƯỢC không? (Xét Socket CPU/Main, RAM DDR4/DDR5, Nguồn đủ W)
-    2. Cấu hình phù hợp để làm gì (game/đồ họa/văn phòng)?
+    Hãy phân tích và đánh giá tính tương thích phần cứng:
+    1. Socket CPU và Mainboard (AM4/AM5/LGA1700...) có khớp không? (Sai socket -> is_compatible = false).
+    2. Chuẩn RAM (DDR4 / DDR5) có khớp với Mainboard không?
+    3. Nguồn (PSU) có đủ công suất gánh CPU + VGA + các linh kiện khác không?
+    4. Tản nhiệt và Vỏ case đã đủ hoặc tối ưu chưa?
 
-    Lưu ý: Thiếu Vỏ Case hoặc Tản Nhiệt vẫn coi là "chạy được" nhưng cần nhắc nhở.
-    Sai Socket CPU/Main = is_compatible: false tuyệt đối.
-
-    Trả về JSON raw (không markdown):
+    YÊU CẦU: Trả về JSON raw chuẩn xác (không markdown text bên ngoài):
     {{
         "is_compatible": true,
-        "evaluation": "Nhận xét chi tiết bằng tiếng Việt."
+        "summary": "Tóm tắt kết luận ngắn gọn trong 1 câu (VD: Cấu hình tương thích 100%, sẵn sàng lắp ráp và vận hành ổn định!)",
+        "suitability": "Tác vụ phù hợp nhất (VD: Gaming 2K/4K max settings, Đồ họa 3D, Render video)",
+        "details": [
+            {{
+                "title": "CPU & Bo Mạch Chủ",
+                "status": "pass",
+                "desc": "Mô tả ngắn gọn về Socket và độ tương thích giữa CPU và Main."
+            }},
+            {{
+                "title": "RAM & Băng Thông",
+                "status": "pass",
+                "desc": "Mô tả ngắn về chuẩn DDR4/DDR5 và kênh bộ nhớ."
+            }},
+            {{
+                "title": "Card Đồ Họa & Nguồn Điện",
+                "status": "pass",
+                "desc": "Mô tả ngắn về công suất nguồn so với TDP VGA."
+            }},
+            {{
+                "title": "Tản Nhiệt & Vỏ Case",
+                "status": "pass",
+                "desc": "Đánh giá tản nhiệt/vỏ case hoặc nhắc nhở nếu chưa chọn."
+            }}
+        ],
+        "evaluation": "Nhận xét tổng quan súc tích 2-3 câu bằng Tiếng Việt."
     }}
+    (Lưu ý: Trường 'status' trong mỗi phần tử details chỉ được mang 1 trong 3 giá trị: "pass", "warning", "fail").
     """
     try:
         raw = _call_gemini(prompt)
@@ -100,6 +154,9 @@ def evaluate_pc_build(items_list: list) -> dict:
     except Exception as e:
         return {
             "is_compatible": False,
+            "summary": "Không thể phân tích tương thích tự động lúc này.",
+            "suitability": "Chưa xác định",
+            "details": [],
             "evaluation": f"Lỗi phân tích AI: {str(e)[:50]}..."
         }
 

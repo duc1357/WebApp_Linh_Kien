@@ -12,15 +12,32 @@ router = APIRouter()
 
 @router.post("/upload-image")
 def upload_image_user(file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    
+    ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'jpg'
+    if ext not in ALLOWED_EXTENSIONS or not (file.content_type or '').startswith('image/'):
+        raise HTTPException(
+            status_code=400, 
+            detail="Định dạng file không hợp lệ! Chỉ cho phép upload ảnh (png, jpg, jpeg, gif, webp)."
+        )
+        
     upload_dir = "static/uploads"
     os.makedirs(upload_dir, exist_ok=True)
     
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
     new_filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(upload_dir, new_filename)
     
+    # Đọc và kiểm tra kích thước file an toàn
+    contents = file.file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="Dung lượng file vượt quá giới hạn tối đa cho phép (5MB)!"
+        )
+        
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
         
     return {"url": f"/static/uploads/{new_filename}"}
 
@@ -72,4 +89,33 @@ def get_my_orders(
     """Lấy lịch sử đơn hàng của người dùng hiện tại."""
     import app.crud.crud as crud
     return crud.get_user_orders(db, current_user.id)
+
+@router.put("/orders/{order_id}/cancel")
+def cancel_my_order(
+    order_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """Khách hàng tự hủy đơn hàng của chính mình khi đơn còn ở trạng thái PENDING."""
+    from sqlalchemy.orm import joinedload
+    order = db.query(models.Order).options(joinedload(models.Order.items)).filter(
+        models.Order.id == order_id,
+        models.Order.user_id == current_user.id
+    ).first()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng của bạn!")
+        
+    if order.status != "PENDING":
+        raise HTTPException(status_code=400, detail="Chỉ có thể hủy đơn hàng khi đang ở trạng thái Chờ xác nhận (PENDING)!")
+        
+    # Hoàn kho sản phẩm (Restock)
+    for item in order.items:
+        product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+        if product:
+            product.stock += item.quantity
+            
+    order.status = "CANCELLED"
+    db.commit()
+    return {"message": "Hủy đơn hàng thành công và đã hoàn trả tồn kho sản phẩm!"}
 

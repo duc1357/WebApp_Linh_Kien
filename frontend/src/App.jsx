@@ -80,7 +80,7 @@ function AppContent() {
   const hideChatbot = hideLayout || location.pathname === '/checkout' || location.pathname.startsWith('/products/');
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col font-sans">
       {!hideLayout && (
         <Header searchQuery={searchQuery} onSearch={handleSearch} />
       )}

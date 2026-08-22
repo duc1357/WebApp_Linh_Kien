@@ -24,5 +24,3 @@ npm install
 npm run dev
 ```
 Giao diện chạy tại: `http://localhost:5173`
-
-*(Generated automatically for the repository).*

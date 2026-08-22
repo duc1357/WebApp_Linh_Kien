@@ -125,7 +125,10 @@ class CheckoutItem(BaseModel):
 
 class OrderCreate(BaseModel):
     user_email: str
+    shipping_name: Optional[str] = None
+    shipping_phone: Optional[str] = None
     shipping_address: str
+    note: Optional[str] = None
     payment_method: str = "COD"
     items: List[CheckoutItem]
 
@@ -152,6 +155,9 @@ class OrderDetail(BaseModel):
     payment_method: str
     payment_status: str
     shipping_address: Optional[str] = None
+    receiver_name: Optional[str] = None
+    receiver_phone: Optional[str] = None
+    note: Optional[str] = None
     created_at: str
     items: List[OrderItemDetail]
 
@@ -174,7 +180,8 @@ class SePayWebhookData(BaseModel):
 
 # --- AI AUXILIARY ---
 class DiagnoseRequest(BaseModel):
-    laptop_id: int
+    laptop_id: Optional[int] = None
+    laptop_name: Optional[str] = None
     issue_description: str
 
 class DiagnoseResponse(BaseModel):
@@ -191,10 +198,18 @@ class PCBuildItem(BaseModel):
 class PCBuildRequest(BaseModel):
     items: List[PCBuildItem]
 
+class PCBuildDetail(BaseModel):
+    title: str
+    status: str  # "pass", "warning", "fail"
+    desc: str
+
 class PCBuildResponse(BaseModel):
     total_price: float
     is_compatible: bool
     evaluation: str
+    summary: Optional[str] = None
+    suitability: Optional[str] = None
+    details: Optional[List[PCBuildDetail]] = None
 
 # --- AI PC BUILD RECOMMENDATION ---
 class BuildRecommendRequest(BaseModel):

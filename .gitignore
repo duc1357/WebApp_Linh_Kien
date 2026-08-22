@@ -42,7 +42,9 @@ build/Release
 node_modules/
 jspm_packages/
 backend/venv/
-backend/__pycache__/
+*.pyc
+**/__pycache__/
+__pycache__/
 backend/.pytest_cache/
 frontend/node_modules/
 frontend/dist/
@@ -139,3 +141,7 @@ dist
 .temp_ag_kit/
 scratch_*.py
 scratch/
+
+# Temporary Microsoft Office files
+~$*
+*.tmp
