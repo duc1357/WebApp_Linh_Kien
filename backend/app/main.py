@@ -160,6 +160,7 @@ def get_payment_config():
 
 
 @app.post("/api/v1/payment/webhook")
+@app.post("/api/webhook/sepay-webhook")
 async def payment_webhook(request: Request, data: schemas.SePayWebhookData, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Apikey "):
