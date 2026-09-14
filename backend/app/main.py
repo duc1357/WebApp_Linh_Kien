@@ -18,8 +18,30 @@ from app.api.routes_user import router as user_router
 from app.api.routes_admin import router as admin_router
 import app.services.email_service as email_service
 
-# Auto-migrate tables (tạo bảng mới nếu chưa có, bao gồm PasswordResetToken)
+from sqlalchemy import inspect, text
+
+# Auto-migrate tables (tạo bảng mới nếu chưa có)
 models.Base.metadata.create_all(bind=engine)
+
+def ensure_db_schema():
+    """Tự động kiểm tra và bổ sung các cột còn thiếu trong bảng đã tồn tại (dành cho Aiven/Production)."""
+    try:
+        inspector = inspect(engine)
+        if "orders" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("orders")]
+            with engine.connect() as conn:
+                if "receiver_name" not in columns:
+                    conn.execute(text("ALTER TABLE orders ADD COLUMN receiver_name VARCHAR(100) NULL"))
+                if "receiver_phone" not in columns:
+                    conn.execute(text("ALTER TABLE orders ADD COLUMN receiver_phone VARCHAR(20) NULL"))
+                if "note" not in columns:
+                    conn.execute(text("ALTER TABLE orders ADD COLUMN note TEXT NULL"))
+                conn.commit()
+    except Exception as e:
+        import logging
+        logging.warning(f"Schema migration warning: {e}")
+
+ensure_db_schema()
 
 app = FastAPI(title="Website Linh Kiện E-commerce")
 
